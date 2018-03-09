@@ -19,7 +19,7 @@ require('http').globalAgent.maxSockets = 35;
 
 const debug = require('debug')('wb:stream');
 const JSZip = require('jszip');
-const PouchDB = require('pouchdb');
+const PouchDB = require('./pouchdb');
 const MemoryStream = require('memorystream');
 const repStream = require('pouchdb-replication-stream');
 
