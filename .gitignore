@@ -1,0 +1,15 @@
+# Editor files
+.idea
+.vscode
+
+# Exclude compiled and temporary files
+build/
+data/
+lib/
+temp/
+tmp/
+
+# npm files
+node_modules
+package-lock.json
+*.log
