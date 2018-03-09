@@ -1,0 +1,17 @@
+{
+  "name": "windowbuilder-utils",
+  "version": "1.0.0",
+  "description": "Утилиты обслуживания баз Заказа дилера",
+  "main": "stream.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Evgeniy Malyarov <info@oknosoft.ru> (http://www.oknosoft.ru)",
+  "license": "MIT",
+  "dependencies": {
+    "jszip": "^3.1.5",
+    "memorystream": "^0.3.1",
+    "pouchdb": "6.0.6",
+    "pouchdb-replication-stream": "^1.2.9"
+  }
+}
