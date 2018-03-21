@@ -8,8 +8,10 @@ data/
 lib/
 temp/
 tmp/
+/img/
 
 # npm files
 node_modules
 package-lock.json
 *.log
+

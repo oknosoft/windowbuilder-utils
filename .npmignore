@@ -2,3 +2,4 @@ localstorage
 lib
 dist
 pouchdb
+/img/
