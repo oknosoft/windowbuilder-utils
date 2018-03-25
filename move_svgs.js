@@ -18,7 +18,8 @@
 'use strict';
 
 const debug = require('debug')('wb:move-svgs');
-const PouchDB = require('./pouchdb');
+const PouchDB = require('./pouchdb')
+  .plugin(require('pouchdb-find'));
 
 debug('required');
 
@@ -44,38 +45,41 @@ db.info()
 
 function move_svgs() {
   const opt = {limit: 100};
-  return db.query('svgs', opt)
-    .then((res) => {
+
+  return db.find({
+    selector: {
+      class_name: 'cat.characteristics',
+      _attachments: {$ne: null}
+    },
+    limit: 100,
+  })
+    .then(({docs}) => {
       // Для продукций заказа получаем вложения
       const aatt = [];
-      debug(res.total_rows);
-      for(const {id} of res.rows){
-        aatt.push(db.getAttachment(id, 'svg')
-          .then((att) => ({ref: id, att: att}))
+      for(const {_id} of docs){
+        aatt.push(db.getAttachment(_id, 'svg')
+          .then((att) => ({ref: _id, att: att}))
           .catch((err) => {}));
       };
-      return Promise.all(aatt);
+      return Promise.all(aatt)
+        .then((aatt) => ({docs, aatt}));
     })
     .then((res) => {
       const aatt = [];
-      for(const {ref, att} of res) {
+      for(const {ref, att} of res.aatt) {
         if(att instanceof Buffer && att.length /* att instanceof Blob && att.size */) {
-          aatt.push(db.get(ref)
-            .then((obj) => {
-              /* $p.utils.blob_as_text(att) */
+          res.docs.some((obj) => {
+            if(obj._id === ref) {
               obj.svg = att.toString();
               delete obj._attachments;
-              return db.put(obj);
-            })
-            .catch((err) => {
-              debug(err);
-            })
-          );
+              return true;
+            }
+          })
         }
       }
-      return Promise.all(aatt)
-        .then(() => {
-          if(aatt.length === 100) {
+      return db.bulkDocs(res.docs)
+        .then((rows) => {
+          if(res.docs.length === 100) {
             return new Promise((resolve, reject) => {
               setTimeout(() => resolve(move_svgs()), 5000);
             });
