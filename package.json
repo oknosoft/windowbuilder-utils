@@ -9,6 +9,7 @@
   "author": "Evgeniy Malyarov <info@oknosoft.ru> (http://www.oknosoft.ru)",
   "license": "MIT",
   "dependencies": {
+    "debug": "^3.1.0",
     "jszip": "^3.1.5",
     "memorystream": "^0.3.1",
     "node-fetch": "^2.1.1",
