@@ -17,7 +17,7 @@
 
 'use strict';
 
-const debug = require('debug')('wb:move-svgs');
+const debug = require('debug')('wb:move_formulas');
 const PouchDB = require('./pouchdb')
   .plugin(require('pouchdb-find'));
 
