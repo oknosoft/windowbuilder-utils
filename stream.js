@@ -49,7 +49,7 @@ new PouchDB(COUCHPATH.replace(prefix, '_all_dbs'), {
 function next(dbs) {
   index++;
   let name = dbs[index];
-  if(name && name.indexOf(`${prefix}${ZONE}_`) !== -1) {
+  if(name && name.indexOf(`${prefix}${ZONE}_`) !== -1 /* && name.indexOf(`_ram`) !== -1 */) {
     name = name.replace(`${prefix}${ZONE}_`, '')
     return ddump(name)
       .then(() => next(dbs));
@@ -91,7 +91,7 @@ function ddump(name) {
 
       // базы doc архивируем с фильтром 'auth/push_only'
       const opt = {batch_size: 200};
-      if(name !== 'ram') {
+      if(name !== 'ram' && ZONE != '1') {
         opt.filter = 'auth/push_only';
       }
       return src.dump(stream, opt)
