@@ -17,7 +17,7 @@
 
 'use strict';
 
-const debug = require('debug')('wb:move_formulas');
+const debug = require('debug')('wb:restore');
 const PouchDB = require('./pouchdb');
 const path = require('path');
 const fs = require('fs');
@@ -43,7 +43,7 @@ const yargs = require('yargs')
         const prefix = 'wb_';
 
         // подключаемся к базе данных
-        const dst = new PouchDB(`${COUCHPATH}${ZONE}_doc`, {
+        const dst = new PouchDB(`${COUCHPATH}${ZONE}_${from.indexOf(doc) !== -1 ? 'doc' : 'ram'}`, {
           auth: {
             username: DBUSER,
             password: DBPWD
@@ -124,7 +124,6 @@ const yargs = require('yargs')
   .epilog('\nMore information about the library: https://github.com/oknosoft/windowbuilder');
 
 const {argv} = yargs;
-
 if(!argv._.length){
   yargs.showHelp();
   process.exit(1);
