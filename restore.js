@@ -40,7 +40,6 @@ const yargs = require('yargs')
 
         // получаем параметры сеанса
         const {DBUSER, DBPWD, COUCHPATH, ZONE} = process.env;
-        const prefix = 'wb_';
 
         // подключаемся к базе данных
         const dst = new PouchDB(`${COUCHPATH}${ZONE}_${from.indexOf('doc') !== -1 ? 'doc' : 'ram'}`, {
