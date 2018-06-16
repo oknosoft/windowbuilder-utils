@@ -52,17 +52,25 @@ const yargs = require('yargs')
         let ind = 0;
         function add (rows) {
           ind++;
-          let chank = '';
-          for(const row of rows) {
-            chank += JSON.stringify(row.doc) + '\n';
-          }
-          const zip = new JSZip();
-          const file = fs.createWriteStream(`${name}_${ind}.zip`);
-          zip.file(`${name}_${ind}.json`, chank, {
-            compression: 'DEFLATE',
-            compressionOptions: {level: 9}
+          return new Promise((resolve, reject) => {
+            let chank = '';
+            for(const row of rows) {
+              chank += JSON.stringify(row.doc) + '\n';
+            }
+            const zip = new JSZip();
+            const file = fs.createWriteStream(`${name}_${ind}.zip`);
+            zip.file(`${name}_${ind}.json`, chank, {
+              compression: 'DEFLATE',
+              compressionOptions: {level: 9}
+            });
+            zip.generateNodeStream({streamFiles:true})
+              .pipe(file)
+              .on('finish', function () {
+                // JSZip generates a readable stream with a "end" event,
+                // but is piped here in a writable stream which emits a "finish" event.
+                resolve();
+              });
           });
-          zip.generateNodeStream({streamFiles:true}).pipe(file);
         }
 
         const opt = {
@@ -70,7 +78,7 @@ const yargs = require('yargs')
           attachments: true,
           startkey: '',
           endkey: '\u0fff',
-          limit: 5000,
+          limit: 3000,
         }
 
         src.info()
@@ -111,14 +119,17 @@ function step(src, add, opt) {
       // повторяем, пока есть данные
       if(rows.length) {
 
-        // записываем в stream
-        add(rows);
-
+        // обновляем ключ для следующей выборки
         opt.startkey = rows[rows.length - 1].key;
         opt.skip = 1;
         docs += rows.length;
         process.stdout.write(`\u001b[2K\u001b[0E\t${docs} docs written`);
-        return step(src, add, opt);
+
+        // записываем в stream
+        return add(rows)
+          .then(() => {
+            return step(src, add, opt);
+          });
       }
     });
 }
