@@ -20,6 +20,7 @@
 const debug = require('debug')('wb:backup');
 const PouchDB = require('./pouchdb');
 const fs = require('fs');
+const JSZip = require('jszip');
 
 const yargs = require('yargs')
   .demand(1)
@@ -48,24 +49,38 @@ const yargs = require('yargs')
           ajax: {timeout: 100000}
         });
 
-        const stream = fs.createWriteStream(`${name}.json`);
+        let ind = 0;
+        function add (rows) {
+          ind++;
+          let chank = '';
+          for(const row of rows) {
+            chank += JSON.stringify(row.doc) + '\n';
+          }
+          const zip = new JSZip();
+          const file = fs.createWriteStream(`${name}_${ind}.zip`);
+          zip.file(`${name}_${ind}.json`, chank, {
+            compression: 'DEFLATE',
+            compressionOptions: {level: 9}
+          });
+          zip.generateNodeStream({streamFiles:true}).pipe(file);
+        }
 
         const opt = {
           include_docs: true,
           attachments: true,
           startkey: '',
           endkey: '\u0fff',
-          limit: 2000,
+          limit: 5000,
         }
 
         src.info()
           .then((info) => {
             debug(`connected to ${info.host}, doc count: ${info.doc_count}`);
-            return step(src, stream, opt);
+            return step(src, add, opt);
           })
           .then(() => {
             debug('all done');
-            process.exit(0);
+            //process.exit(0);
           })
           .catch((err) => {
             debug(err);
@@ -90,22 +105,20 @@ if(!argv._.length){
 let docs = 0;
 const mb = 1024 * 1024;
 
-function step(src, stream, opt) {
+function step(src, add, opt) {
   return src.allDocs(opt)
-    .then((res) => {
-      // записываем в stream
-      for(const row of res.rows) {
-        stream.write(JSON.stringify(row.doc) + '\n');
-      }
-      if(res.rows.length) {
-        opt.startkey = res.rows[res.rows.length - 1].key;
+    .then(({rows}) => {
+      // повторяем, пока есть данные
+      if(rows.length) {
+
+        // записываем в stream
+        add(rows);
+
+        opt.startkey = rows[rows.length - 1].key;
         opt.skip = 1;
-        docs += res.rows.length;
-        process.stdout.write(`\u001b[2K\u001b[0E\t${(stream.bytesWritten / mb).toFixed(1)}Mb read, ${docs} docs written`);
-        return step(src, stream, opt);
-      }
-      else {
-        stream.end();
+        docs += rows.length;
+        process.stdout.write(`\u001b[2K\u001b[0E\t${docs} docs written`);
+        return step(src, add, opt);
       }
     });
 }
