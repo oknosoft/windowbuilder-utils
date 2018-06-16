@@ -78,6 +78,8 @@ const yargs = require('yargs')
               try {
                 if(last === ']}') {
                   data.splice(data.length - 1, 1);
+                  debug('all done');
+                  process.exit(0);
                 }
                 else {
                   const test = JSON.parse(last)
@@ -92,7 +94,7 @@ const yargs = require('yargs')
                 dst.bulkDocs(data.map((str) => JSON.parse(str)), {new_edits: false})
                   .then((rows) => {
                     docs += data.length;
-                    debug(`${stream.bytesRead / mb}Mb read, ${docs} docs written`);
+                    process.stdout.write(`\u001b[2K\u001b[0E\t${stream.bytesRead / mb}Mb read, ${docs} docs written`);
                     stream.resume();
                   })
                   .catch((err) => {
@@ -105,10 +107,6 @@ const yargs = require('yargs')
                 process.exit(1);
               }
             });
-
-          })
-          .then((res) => {
-            debug('all done');
           })
           .catch(err => {
             debug(err);
