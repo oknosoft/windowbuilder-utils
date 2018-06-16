@@ -43,7 +43,7 @@ const yargs = require('yargs')
         const prefix = 'wb_';
 
         // подключаемся к базе данных
-        const dst = new PouchDB(`${COUCHPATH}${ZONE}_${from.indexOf(doc) !== -1 ? 'doc' : 'ram'}`, {
+        const dst = new PouchDB(`${COUCHPATH}${ZONE}_${from.indexOf('doc') !== -1 ? 'doc' : 'ram'}`, {
           auth: {
             username: DBUSER,
             password: DBPWD
@@ -61,7 +61,7 @@ const yargs = require('yargs')
 
             // открываем файловый поток
             const mb = 1024 * 1024;
-            const stream = fs.createReadStream(from, {highWaterMark: mb * 3});
+            const stream = fs.createReadStream(from, {highWaterMark: mb * 4});
             stream.on('data', (chunk) => {
               // тормозим поток
               stream.pause();
