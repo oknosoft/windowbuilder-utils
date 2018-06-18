@@ -51,14 +51,18 @@ const yargs = require('yargs')
 
         let ind = 0;
         function add (rows) {
-          ind++;
           return new Promise((resolve, reject) => {
             let chank = '';
             for(const row of rows) {
               chank += JSON.stringify(row.doc) + '\n';
             }
             const zip = new JSZip();
-            const file = fs.createWriteStream(`${name}_${ind}.zip`);
+            ind++;
+            let suffix = ind.toString();
+            while (suffix.length < 5) {
+              suffix = '0' + suffix;
+            }
+            const file = fs.createWriteStream(`${name}_${suffix}.zip`);
             zip.file(`${name}_${ind}.json`, chank, {
               compression: 'DEFLATE',
               compressionOptions: {level: 9}

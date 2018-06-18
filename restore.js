@@ -26,6 +26,8 @@ const JSZip = require('jszip');
 debug('required');
 const mb = 1024 * 1024;
 let docs = 0;
+let files;
+let dst;
 
 const yargs = require('yargs')
   .demand(1)
@@ -44,7 +46,7 @@ const yargs = require('yargs')
         const {DBUSER, DBPWD, COUCHPATH, ZONE} = process.env;
 
         // подключаемся к базе данных
-        const dst = new PouchDB(`${COUCHPATH}${ZONE}_${from.indexOf('doc') !== -1 ? 'doc' : 'ram'}`, {
+        dst = new PouchDB(`${COUCHPATH}${ZONE}_${from.indexOf('doc') !== -1 ? 'doc' : 'ram'}`, {
           auth: {
             username: DBUSER,
             password: DBPWD
@@ -55,7 +57,7 @@ const yargs = require('yargs')
         dst.info()
           .then((info) => {
             debug(`connected to ${info.host}, doc count: ${info.doc_count}`);
-            restore(from, dst);
+            restore(from);
           })
           .catch(err => {
             debug(err);
@@ -70,20 +72,20 @@ const yargs = require('yargs')
     })
   .epilog('\nMore information about the library: https://github.com/oknosoft/windowbuilder');
 
-function restore(from, dst) {
+function restore(from) {
   // если from указывает на каталог, перебираем файлы архивов
   try{
     if(fs.lstatSync(from).isDirectory()) {
-      const files = fs.readdirSync(from).filter((file) => {
+      files = fs.readdirSync(from).filter((file) => {
         const stat = fs.statSync(path.join(from, file));
         return stat.isFile() && file.indexOf('.zip') !== -1;
       });
-      fromFiles(from, files, dst);
+      fromFiles(from);
     }
     else {
       // открываем файловый поток
       const stream = fs.createReadStream(from, {highWaterMark: mb * 4});
-      fromFile(stream, dst)
+      fromFile(stream, from)
         .then(() => {
           debug('\nall done');
         })
@@ -98,35 +100,32 @@ function restore(from, dst) {
   }
 }
 
-function fromFiles(from, files, dst) {
+function fromFiles(from) {
   return new Promise((resolve, reject) => {
     if(!files.length) {
       return resolve();
     }
-    const file = files.splice(0, 1)[0];
     // read a zip file
-    fs.readFile(path.join(from, file), (err, data) => {
+    fs.readFile(path.join(from, files[0]), (err, data) => {
       if (err) {
         reject(err);
       }
-      JSZip.loadAsync(data).then((zip) => {
-        const content = zip.file(file.replace('.zip', '.json'));
-        const stream = content.nodeStream();
-        fromFile(stream, dst)
-          .then(() => {
-            resolve();
-          })
-      });
+      resolve(JSZip.loadAsync(data));
     });
   })
+    .then((zip) => {
+      const file = files.splice(0, 1)[0];
+      const content = zip.file(file.replace('.zip', '.json'));
+      return fromFile(content.nodeStream(), file);
+    })
     .then(() => {
       if(files.length) {
-        return fromFiles(from, files, dst);
+        return fromFiles(from);
       }
     });
 }
 
-function fromFile(stream, dst) {
+function fromFile(stream, name) {
 
   return new Promise((resolve, reject) => {
     // в tail (хвост) будем складывать неполные объекты
@@ -177,7 +176,9 @@ function fromFile(stream, dst) {
         data.length && dst.bulkDocs(data.map((str) => JSON.parse(str)), {new_edits: false})
           .then((rows) => {
             docs += data.length;
-            process.stdout.write(`\u001b[2K\u001b[0E\t${stream.bytesRead / mb}Mb read, ${docs} docs written`);
+            data.length = 0;
+            debug(`\u001b[2K\u001b[0E\tfile: ${name}, ${docs} docs written`);
+            //process.stdout.write(`\u001b[2K\u001b[0E\tfile: ${name}, ${docs} docs written`);
             if(finish) {
               resolve();
             }
