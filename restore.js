@@ -106,7 +106,7 @@ function fromFiles(from) {
       return resolve();
     }
     // read a zip file
-    fs.readFile(path.join(from, files[0]), (err, data) => {
+    fs.readFile(path.join(from, files.splice(0, 1)[0]), (err, data) => {
       if (err) {
         reject(err);
       }
@@ -114,8 +114,8 @@ function fromFiles(from) {
     });
   })
     .then((zip) => {
-      const file = files.splice(0, 1)[0];
-      const content = zip.file(file.replace('.zip', '.json'));
+      const file = Object.keys(zip.files)[0];
+      const content = zip.file(file);
       return fromFile(content.nodeStream(), file);
     })
     .then(() => {
