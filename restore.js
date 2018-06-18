@@ -173,22 +173,27 @@ function fromFile(stream, name) {
       }
       // отправляем данные в couchdb
       try {
-        data.length && dst.bulkDocs(data.map((str) => JSON.parse(str)), {new_edits: false})
-          .then((rows) => {
-            docs += data.length;
-            data.length = 0;
-            debug(`\u001b[2K\u001b[0E\tfile: ${name}, ${docs} docs written`);
-            //process.stdout.write(`\u001b[2K\u001b[0E\tfile: ${name}, ${docs} docs written`);
-            if(finish) {
-              resolve();
-            }
-            else {
-              stream.resume();
-            }
-          })
-          .catch((err) => {
-            reject(err);
-          });
+        if(data.length){
+          dst.bulkDocs(data.map((str) => JSON.parse(str)), {new_edits: false})
+            .then((rows) => {
+              docs += data.length;
+              data.length = 0;
+              debug(`\u001b[2K\u001b[0E\tfile: ${name}, ${docs} docs written`);
+              //process.stdout.write(`\u001b[2K\u001b[0E\tfile: ${name}, ${docs} docs written`);
+              if(finish) {
+                resolve();
+              }
+              else {
+                stream.resume();
+              }
+            })
+            .catch((err) => {
+              reject(err);
+            });
+        }
+        else {
+          stream.resume();
+        }
       }
       catch(err) {
         reject(err);
