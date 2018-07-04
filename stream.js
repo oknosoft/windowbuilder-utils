@@ -11,6 +11,7 @@
  * DBPWD admin
  * DBUSER admin
  * COUCHPATH http://cou221:5984/wb_
+ * TO_FILE 1
  */
 
 'use strict';
@@ -35,7 +36,7 @@ const {DBUSER, DBPWD, COUCHPATH, ZONE, TO_FILE} = process.env;
 const prefix = 'wb_';
 let index = -1;
 
-// получаем массим всех баз
+// получаем массив всех баз
 // new PouchDB(COUCHPATH.replace(prefix, '_all_dbs'), {
 //   auth: {
 //     username: DBUSER,
