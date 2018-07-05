@@ -13,7 +13,7 @@
  * DBPWD admin
  * DBUSER admin
  * COUCHPATH http://cou221:5984/wb_
- * COMPACT 1
+ * CONTINUES 1
  */
 
 'use strict';
@@ -90,6 +90,7 @@ function restart_stopped() {
           rows.push(info);
         }
       }
+      debug(`finded ${rows.length} problem rows`);
       return next(rows)
     })
     .catch((err) => {
@@ -125,6 +126,7 @@ function restart(info) {
   return repl_db.get(info._id)
     .catch(() => ({_id: info._id}))
     .then((doc) => {
+      debug(`stop ${doc._id}`);
       return repl_db.remove(doc._id, doc._rev);
     })
     // ждём
@@ -140,6 +142,7 @@ function restart(info) {
         source: info.source,
         target: info.target,
       }
+      debug(`run ${doc._id}`);
       return repl_db.put(repl);
     })
     // продолжаем через 2 минуты
