@@ -51,6 +51,7 @@ function restart_stopped() {
     return setTimeout(restart_stopped, 300000);
   }
   runing = true;
+  debug(new Date().toISOString());
 
   repl_db.allDocs({include_docs: true})
     .then(({rows}) => {
@@ -85,7 +86,7 @@ function restart_stopped() {
     .then((res) => {
       const rows = [];
       for(const info of res) {
-        if(info.continuous && !info.task) {
+        if(info.continuous && (!info.task || info._replication_state === 'error')) {
           // надо перезапустить
           rows.push(info);
         }
@@ -124,10 +125,12 @@ function restart(info) {
 
   // останавливаем репликацию
   return repl_db.get(info._id)
-    .catch(() => ({_id: info._id}))
+    .catch(() => null)
     .then((doc) => {
-      debug(`stop ${doc._id}`);
-      return repl_db.remove(doc._id, doc._rev);
+      if(doc) {
+        debug(`stop ${doc._id}`);
+        return repl_db.remove(doc._id, doc._rev);
+      }
     })
     // ждём
     .then(() => sleep(10000))
@@ -136,13 +139,13 @@ function restart(info) {
       const repl = {
         _id: info._id,
         continuous: info.continuous,
-        create_target : info.continuous,
+        create_target : info.create_target,
         owner: info.owner,
         selector: info.selector,
         source: info.source,
         target: info.target,
       }
-      debug(`run ${doc._id}`);
+      debug(`run ${repl._id}`);
       return repl_db.put(repl);
     })
     // продолжаем через 2 минуты
