@@ -18,7 +18,7 @@ module.exports = function reset({name}) {
   return ssh.connect({
     host: path[0],
     port: path[1],
-    username: SSHUSER,
+    username: SSHUSER || 'root',
     password: SSHPWD,
   })
     .then((ssh) => {
