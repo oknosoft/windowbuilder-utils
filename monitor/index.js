@@ -114,7 +114,7 @@ check: ${check.name} ${JSON.stringify(server.errors[check.name])}
 }
 
 debug('execute every 2 minute');
-new CronJob('1 */2 * * * *', execute, null, true);
+new CronJob('1 */1 * * * *', execute, null, true);
 
 debug('monitor every 6 minute');
-new CronJob('30 */6 * * * *', monitor, null, true);
+new CronJob('30 */3 * * * *', monitor, null, true);
