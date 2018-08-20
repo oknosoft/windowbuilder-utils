@@ -119,8 +119,6 @@ check: ${check.name} ${JSON.stringify(server.errors[check.name])}
   }
 }
 
-reset({name: servers[0].url});
-
 debug('execute every 2 minute');
 new CronJob('1 */1 * * * *', execute, null, true);
 
