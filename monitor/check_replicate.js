@@ -13,7 +13,8 @@ module.exports = {
   name: 'replicate',      // имя проверки в статистике
   order: 2,               // порядок исполнения проверки
   break_on_error: true,   // в случае ошибки, последующие проверки выполнять бессмысленно
-  mail_on: 3,             // если три раза подряд - пишем письмо
+  mail_on: 2,             // если три раза подряд - пишем письмо
+  reset: true,            // при повторении ошибки, выполнять перезапуск couchdb
   method ({__opts}) {
     const url = Object.assign(new URL(__opts.name), __opts.auth);
     return fetch(`${url.href}_scheduler/jobs`)

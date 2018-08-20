@@ -23,6 +23,7 @@ const PouchDB = require('../pouchdb');
 const fs = require('fs');
 const {CronJob} = require('cron');
 const mailer = require('./mailer');
+const reset = require('./reset');
 
 const {DBUSER, DBPWD, COUCHDBS} = process.env;
 
@@ -85,6 +86,7 @@ function execute() {
  */
 function monitor() {
   let text = '';
+  const reboot = new Set();
   for(const server of servers) {
     for (const check of checks) {
       if(server.errors[check.name] && server.errors[check.name].length >= check.mail_on) {
@@ -94,6 +96,7 @@ server: ${server.url}
 check: ${check.name} ${JSON.stringify(server.errors[check.name])}
 -----
 `;
+        check.reset && reboot.add(server);
       }
     }
   }
@@ -110,8 +113,13 @@ check: ${check.name} ${JSON.stringify(server.errors[check.name])}
         }
       })
       .catch((err) => debug(err));
+    for(const server of reboot) {
+      reset({name: server.url});
+    }
   }
 }
+
+reset({name: servers[0].url});
 
 debug('execute every 2 minute');
 new CronJob('1 */1 * * * *', execute, null, true);
