@@ -20,7 +20,6 @@
  * SSHPWD xxx
  */
 
-const debug = require('debug')('wb:mon');
 const PouchDB = require('../pouchdb');
 const fs = require('fs');
 const {CronJob} = require('cron');
@@ -114,15 +113,22 @@ check: ${check.name} ${JSON.stringify(server.errors[check.name])}
           }
         }
       })
-      .catch((err) => debug(err));
+      .catch((err) => console.error(err));
     for(const server of reboot) {
       reset({name: server.url});
     }
   }
 }
 
-debug('execute every 2 minute');
+function health() {
+  mailer({text: `time: ${new Date().toISOString()}\nstatus: ok`});
+}
+
+console.log('execute every 2 minute');
 new CronJob('1 */2 * * * *', execute, null, true);
 
-debug('monitor every 6 minute');
+console.log('monitor every 6 minute');
 new CronJob('30 */6 * * * *', monitor, null, true);
+
+console.log('health every day');
+new CronJob('0 0 9,18 * * *', health, null, true);

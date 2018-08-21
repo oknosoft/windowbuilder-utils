@@ -28,6 +28,7 @@ module.exports = function reset({name}) {
       return ssh.dispose();
     })
     .catch((err) => {
+      console.error(err);
       return err;
     });
 }

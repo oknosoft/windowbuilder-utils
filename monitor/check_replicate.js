@@ -35,6 +35,7 @@ module.exports = {
         return errors.length ? errors : {ok: true};
       })
       .catch((err) => {
+        console.error(err);
         return err;
       });
   }

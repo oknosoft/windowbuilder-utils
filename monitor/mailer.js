@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
   service: 'Gmail',
   auth: {
     user: MAILUSER || 'support@oknosoft.ru',
-    pass: MAILPWD || 'MAILPWD'
+    pass: MAILPWD || 'xxx'
   }
 });
 

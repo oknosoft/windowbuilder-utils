@@ -14,6 +14,9 @@ module.exports = {
   method (db) {
     return db.info()
       .then(() => ({ok: true}))
-      .catch((err) => err);
+      .catch((err) => {
+        console.error(err);
+        return err;
+      });
   }
 }
