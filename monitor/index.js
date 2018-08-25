@@ -88,11 +88,14 @@ function execute() {
 function monitor() {
   let text = '';
   const reboot = new Set();
+
+  console.log(dateStr());
+
   for(const server of servers) {
     for (const check of checks) {
       if(server.errors[check.name] && server.errors[check.name].length >= check.mail_on) {
         text +=
-`time: ${new Date().toISOString()}
+`time: ${dateStr()}
 server: ${server.url}
 check: ${check.name} ${JSON.stringify(server.errors[check.name])}
 -----
@@ -120,15 +123,20 @@ check: ${check.name} ${JSON.stringify(server.errors[check.name])}
   }
 }
 
-function health() {
-  mailer({text: `time: ${new Date().toISOString()}\nstatus: ok`});
+function dateStr() {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return `${d.toISOString().replace('Z', '')} GMT+${-d.getTimezoneOffset() / 60}`;
 }
 
+function health() {
+  mailer({text: `time: ${dateStr()}\nstatus: ok`});
+}
+
+console.log(dateStr());
 console.log('execute every 2 minute');
 new CronJob('1 */2 * * * *', execute, null, true);
-
 console.log('monitor every 6 minute');
 new CronJob('30 */6 * * * *', monitor, null, true);
-
 console.log('health every day');
 new CronJob('0 0 9,18 * * *', health, null, true);
