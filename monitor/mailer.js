@@ -29,8 +29,11 @@ const mailOptions = {
   html: '<b>Hello world?</b>'               // html body
 };
 
-module.exports = function sendMail({text, html}) {
+module.exports = function sendMail({text, html, status}) {
   const options = Object.assign({}, mailOptions, {text, html});
+  if(status) {
+    options.subject += `: ${status}`;
+  }
   return transporter.sendMail(options);
 }
 

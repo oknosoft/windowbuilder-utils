@@ -106,7 +106,7 @@ check: ${check.name} ${JSON.stringify(server.errors[check.name])}
   }
 
   if(text) {
-    mailer({text})
+    mailer({text, status: 'error'})
       .then(() => {
         for(const server of servers) {
           for (const check of checks) {
@@ -130,8 +130,10 @@ function dateStr() {
 }
 
 function health() {
-  mailer({text: `time: ${dateStr()}\nstatus: ok`});
+  mailer({text: `time: ${dateStr()}\nstatus: ok`, status: 'ok'});
 }
+
+health();
 
 console.log(dateStr());
 console.log('execute every 2 minute');
