@@ -25,6 +25,7 @@ const fs = require('fs');
 const {CronJob} = require('cron');
 const mailer = require('./mailer');
 const reset = require('./reset');
+const repl_users = require('./repl_users');
 
 const {DBUSER, DBPWD, COUCHDBS} = process.env;
 
@@ -48,7 +49,7 @@ const checks = (() => {
 function execute() {
 
   // бежим в промисе по серверам
-  servers.reduce((sum, server) => {
+  return servers.reduce((sum, server) => {
     return sum.then(() => {
       const db = new PouchDB(server.url, {
         auth: {
@@ -79,7 +80,10 @@ function execute() {
         });
       }, Promise.resolve());
     });
-  }, Promise.resolve());
+  }, Promise.resolve())
+    .then(() => {
+      repl_users(servers);
+    });
 }
 
 /**
@@ -133,7 +137,8 @@ function health() {
   mailer({text: `time: ${dateStr()}\nstatus: ok`, status: 'ok'});
 }
 
-health();
+//health();
+//repl_users(servers);
 
 console.log(dateStr());
 console.log('execute every 2 minute');
