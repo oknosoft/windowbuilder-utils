@@ -15,7 +15,10 @@ module.exports = {
   break_on_error: true,   // в случае ошибки, последующие проверки выполнять бессмысленно
   mail_on: 4,             // если три раза подряд - пишем письмо
   reset: true,            // при повторении ошибки, выполнять перезапуск couchdb
-  method ({__opts}) {
+  method ({__opts}, {http}) {
+    if(http) {
+      return Promise.resolve({ok: true});
+    }
     const url = Object.assign(new URL(__opts.name), __opts.auth);
     return fetch(`${url.href}_scheduler/jobs`)
       .then(res => res.json())

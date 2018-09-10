@@ -18,6 +18,8 @@
  * MAILCC shirokov@ecookna.ru,nmivan@oknosoft.ru
  * SSHUSER root
  * SSHPWD xxx
+ * REPORTS
+ * REPORTSSSH
  */
 
 const PouchDB = require('../pouchdb');
@@ -26,10 +28,14 @@ const {CronJob} = require('cron');
 const mailer = require('./mailer');
 const reset = require('./reset');
 const repl_users = require('./repl_users');
+const reports_ping = require('./check_reports');
 
-const {DBUSER, DBPWD, COUCHDBS} = process.env;
+const {DBUSER, DBPWD, COUCHDBS, REPORTS, REPORTSSSH} = process.env;
 
+// массив серверов COUCHDB
 const servers = (COUCHDBS || '').split(',').map((url) => ({url, errors: {}}));
+// подмешиваем сюда другие серверы
+servers.push({http: REPORTS, ssh: REPORTSSSH, errors: {}});
 
 const checks = (() => {
   const res = [];
@@ -51,7 +57,7 @@ function execute() {
   // бежим в промисе по серверам
   return servers.reduce((sum, server) => {
     return sum.then(() => {
-      const db = new PouchDB(server.url, {
+      const db = new PouchDB(server.url || 'http://localhost', {
         auth: {
           username: DBUSER,
           password: DBPWD
@@ -62,7 +68,7 @@ function execute() {
       let stop;
       return checks.reduce((sum, check) => {
         return stop ? Promise.resolve() : sum.then(() => {
-          check.method(db).then((res) => {
+          check.method(db, server).then((res) => {
             if(!res || !res.ok) {
               if(!server.errors[check.name]) {
                 server.errors[check.name] = [];
@@ -82,6 +88,7 @@ function execute() {
     });
   }, Promise.resolve())
     .then(() => {
+      // дополнительные регламентные задачи
       repl_users(servers);
     });
 }
@@ -122,7 +129,7 @@ check: ${check.name} ${JSON.stringify(server.errors[check.name])}
       })
       .catch((err) => console.error(err));
     for(const server of reboot) {
-      reset({name: server.url});
+      reset({name: server.url, ssh: server.ssh});
     }
   }
 }
@@ -142,8 +149,8 @@ function health() {
 
 console.log(dateStr());
 console.log('execute every 2 minute');
-new CronJob('1 */2 * * * *', execute, null, true);
+new CronJob('1 */1 * * * *', execute, null, true);
 console.log('monitor every 6 minute');
-new CronJob('30 */6 * * * *', monitor, null, true);
+new CronJob('30 */3 * * * *', monitor, null, true);
 console.log('health every day');
 new CronJob('0 0 9,18 * * *', health, null, true);

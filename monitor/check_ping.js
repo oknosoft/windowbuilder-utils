@@ -11,7 +11,10 @@ module.exports = {
   order: 0,               // порядок исполнения проверки
   break_on_error: true,   // в случае ошибки, последующие проверки выполнять бессмысленно
   mail_on: 2,             // если три раза подряд - пишем письмо
-  method (db) {
+  method (db, {http}) {
+    if(http) {
+      return Promise.resolve({ok: true});
+    }
     return db.info()
       .then(() => ({ok: true}))
       .catch((err) => {
