@@ -7,7 +7,6 @@
  */
 
 const fetch = require('node-fetch');
-const {URL} = require('url');
 
 module.exports = {
   name: 'reports',        // имя проверки в статистике
@@ -21,11 +20,18 @@ module.exports = {
     }
     return fetch(http)
       .then(res => {
-        return res.status === 200 ? {ok: true} : {status: res.status, message: res.statusText};
+        if(res.status === 200) {
+          return {ok: true};
+        }
+        else {
+          const err = {status: res.status, message: res.statusText};
+          console.error(err);
+          return err;
+        }
       })
       .catch((err) => {
         console.error(err);
         return err;
       });
   }
-}
+};

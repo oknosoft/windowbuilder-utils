@@ -35,5 +35,5 @@ module.exports = function sendMail({text, html, status}) {
     options.subject += `: ${status}`;
   }
   return transporter.sendMail(options);
-}
+};
 

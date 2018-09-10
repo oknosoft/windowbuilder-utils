@@ -28,7 +28,6 @@ const {CronJob} = require('cron');
 const mailer = require('./mailer');
 const reset = require('./reset');
 const repl_users = require('./repl_users');
-const reports_ping = require('./check_reports');
 
 const {DBUSER, DBPWD, COUCHDBS, REPORTS, REPORTSSSH} = process.env;
 
@@ -107,7 +106,7 @@ function monitor() {
       if(server.errors[check.name] && server.errors[check.name].length >= check.mail_on) {
         text +=
 `time: ${dateStr()}
-server: ${server.url}
+server: ${server.url || server.ssh}
 check: ${check.name} ${JSON.stringify(server.errors[check.name])}
 -----
 `;
