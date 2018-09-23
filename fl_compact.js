@@ -1,9 +1,9 @@
 /**
- * Исправляет ошибку _design/search
+ * Обслуживание баз flowcon
  *
- * @module fl_redesign
+ * @module fl_compact
  *
- * Created by Evgeniy Malyarov on 23.09.2018.
+ * Created by Evgeniy Malyarov on 04.07.2018.
  */
 
 /**
@@ -19,14 +19,14 @@
 require('http').globalAgent.maxSockets = 35;
 
 const debug = require('debug')('wb:reindex');
-const PouchDB = require('./pouchdb');
+const PouchDB = require('./pouchdb').plugin({exec});
 const fs = require('fs');
 
 debug('required');
 
 // инициализируем параметры сеанса и метаданные
 const {DBUSER, DBPWD, COUCHPATH} = process.env;
-const prefix = 'wb_';
+const prefix = 'fl_';
 let index = 1;
 
 // получаем массив всех баз
@@ -44,8 +44,7 @@ function next(dbs) {
 
   index++;
   let name = dbs[index];
-  if(name && name[0] !== '_' && name.indexOf('_meta') === -1) {
-    name = name.replace(`${prefix}${ZONE}_`, '');
+  if(name && name.startsWith(prefix)) {
     return reindex(name)
       .then(() => next(dbs));
   }
@@ -54,8 +53,26 @@ function next(dbs) {
   }
 }
 
+function exec(method, path, form) {
+
+  return new Promise((resolve, reject) => {
+    this._ajax({
+      url: `${this.name}/${path}`,
+      auth: {
+        username: DBUSER,
+        password: DBPWD
+      },
+      method,
+      form,
+    }, (err, obj, resp) => {
+      debug(`${this.name.replace(/^(.*\/)/, '')}/${path}: ${JSON.stringify(err || obj)}`);
+      setTimeout(resolve, 2000);
+    });
+  });
+}
+
 function reindex(name) {
-  // получаем базы
+
   const db = new PouchDB(`${COUCHPATH}/${name}`, {
     auth: {
       username: DBUSER,
@@ -64,18 +81,8 @@ function reindex(name) {
     skip_setup: true
   });
 
-  return db.get('_design/search')
-    .then((doc) => {
-      doc._id = '_design/mango';
-      const _rev = doc._rev;
-      delete doc._rev;
-      return db.put(doc)
-        .then(() => {
-          debug(`${name}: ok`);
-          return db.remove('_design/search', _rev);
-        });
-    })
-    .catch((err) => {
-      debug(`${name}: ${err.error}, ${err.reason}`);
-    });
+  return db.exec('PUT', '_revs_limit', '3')
+    .then(() => db.exec('POST', '_compact', ''))
+    .then(() => db.exec('POST', '_view_cleanup', ''))
+    .then(() => db.close());
 }
