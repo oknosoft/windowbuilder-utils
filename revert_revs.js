@@ -27,7 +27,7 @@ debug('required');
 // инициализируем параметры сеанса и метаданные
 const {DBUSER, DBPWD, COUCHPATH, ZONE} = process.env;
 const prefix = 'wb_';
-const start = '2018-10-23T16';
+const start = '2018-10-24T15:31';
 const blank_guid = '00000000-0000-0000-0000-000000000000';
 const stat = {
   doc_count: 0,
@@ -48,26 +48,32 @@ const src = new PouchDB(`${COUCHPATH}${ZONE}_doc`, {
 src.info()
   .then((info) => {
     debug(`connected to ${info.host}, doc count: ${info.doc_count}`);
-    return process_fragment();
+    return process_files();
   })
   .then((res) => {
     debug('all done');
+    console.log(stat);
   })
   .catch(err => {
     debug(err)
   });
 
-// дописывает в файл информацию об обработанном заказе
-function write_log(doc) {
-
+function process_files() {
+  for(const file of ['errors.json', 'errors2.json', 'errors3.json']) {
+    for(const ox of require(`./img/${file}`).err_prods) {
+      stat.err_prods.push(ox);
+    }
+  }
+  return stat.err_prods.reduce(revert_production, Promise.resolve());
 }
+
 
 // обрабатывает заказы пачками по 100
 function process_fragment(bookmark) {
   return src.find({
     selector: {
       class_name: 'doc.calc_order',
-      date: {$gte: '2018-10-23'},
+      date: {$gte: start},
       search: {$gte: null}
     },
     limit: 100,
@@ -106,8 +112,8 @@ function load_production(doc) {
       .then(({rows}) => {
         stat.prod_count += rows.length;
         return rows
-          .filter((row) => row.doc && !row.doc.specification)
-          .map((row) => row.doc);
+          .filter((row) => !row.doc || !row.doc.specification)
+          .map((row) => row.doc || {_id: row.key, calc_order: doc._id.substr(15)});
       });
   }
   return Promise.resolve();
@@ -116,6 +122,14 @@ function load_production(doc) {
 // контролирует заполненность и пытается восстановить из версии
 function revert_production(sum, ox) {
   return sum.then(() => {
-    stat.err_prods.push(ox);
-  });
+    // stat.err_prods.push(ox);
+    return src.get(ox._id, {open_revs: 'all'});
+  })
+    .then((res) => {
+      stat.prod_count++;
+      res = null;
+    })
+    .catch((err) => {
+      err = null;
+    });
 }
