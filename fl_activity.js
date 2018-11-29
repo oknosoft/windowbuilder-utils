@@ -1,5 +1,5 @@
 /**
- * Исправляет ошибку _design/search -> _design/mango
+ * Добавляет ddoc _design/activity
  *
  * @module fl_redesign
  *
@@ -11,7 +11,7 @@
  * DEBUG "wb:*,-not_this"
  * DBPWD admin
  * DBUSER admin
- * COUCHPATH http://cou221:5984/wb_
+ * COUCHPATH http://fl211:5984
  */
 
 'use strict';
@@ -21,6 +21,7 @@ require('http').globalAgent.maxSockets = 35;
 const debug = require('debug')('wb:reindex');
 const PouchDB = require('./pouchdb');
 const fs = require('fs');
+const activity = require('./files/activity');
 
 debug('required');
 
@@ -45,7 +46,6 @@ function next(dbs) {
   index++;
   let name = dbs[index];
   if(name && name[0] !== '_' && name.indexOf('_meta') === -1) {
-    name = name.replace(`${prefix}${ZONE}_`, '');
     return reindex(name)
       .then(() => next(dbs));
   }
@@ -64,16 +64,16 @@ function reindex(name) {
     skip_setup: true
   });
 
-  return db.get('_design/search')
+  return db.get('_design/activity')
+    .catch((err) => {
+      if(err.status !== 404) {
+        return err;
+      }
+    })
     .then((doc) => {
-      doc._id = '_design/mango';
-      const _rev = doc._rev;
-      delete doc._rev;
-      return db.put(doc)
-        .then(() => {
-          debug(`${name}: ok`);
-          return db.remove('_design/search', _rev);
-        });
+      if(!doc) {
+        return db.put(activity)
+      }
     })
     .catch((err) => {
       debug(`${name}: ${err.error}, ${err.reason}`);

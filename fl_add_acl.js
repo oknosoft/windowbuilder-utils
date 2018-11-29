@@ -37,7 +37,8 @@ const src = new PouchDB(COUCHPATH, {
 src.info()
   .then((info) => {
     debug(`connected to ${info.host}, doc count: ${info.doc_count}`);
-    return move_docs('cat.articles');
+    //return move_docs('cat.articles');
+    return move_docs('chart');
   })
   .then((res) => {
     debug('all done');

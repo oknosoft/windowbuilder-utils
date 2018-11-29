@@ -86,7 +86,7 @@ function move_units(bookmark) {
             nunits += `${unit._id.substr(14)},${unit.id},${unit.name},${unit.qualifier_unit},${unit.heft},${unit.volume},${unit.coefficient},${unit.rounding_threshold}`;
           }
         }
-        for(let fld in nom) {
+        for(const fld in nom) {
           if(nom[fld] === blank) {
             nom[fld] = '';
             ch = true;
