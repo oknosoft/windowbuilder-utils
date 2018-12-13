@@ -21,18 +21,19 @@ module.exports = {
     }
     const url = Object.assign(new URL(__opts.name), __opts.auth);
     function find_errors({errors, skip, limit}) {
-      return fetch(`${url.href}_scheduler/jobs?skip=${skip}&limit=${limit}`)
+      return fetch(`${url.href}_scheduler/docs?skip=${skip}&limit=${limit}`)
         .then(res => res.json())
         .then(res => {
-          for(const job of res.jobs) {
-            if(job.database === '_replicator' && job.history) {
-              const status = job.history[0];
-              status.type !== 'started' && status.type !== 'added' && errors.push(Object.assign(status, {
-                source: job.source,
-                target: job.target,
-                doc_id: job.doc_id,
-                start_time: job.start_time,
-              }))
+          for(const doc of res.docs) {
+            if(doc.database === '_replicator') {
+              ['failed', 'error', 'crashing'].indexOf(doc.state) !== -1 && errors.push({
+                source: doc.source,
+                target: doc.target,
+                doc_id: doc.doc_id,
+                start_time: doc.start_time,
+                last_updated: doc.last_updated,
+                info: doc.info || '',
+              })
             }
           }
           const processed = skip + limit;
@@ -46,6 +47,6 @@ module.exports = {
         });
       }
     
-    return find_errors({errors: [], skip: 0, limit: 50});
+    return find_errors({errors: [], skip: 0, limit: 1000});
   }
 };
