@@ -20,26 +20,33 @@ module.exports = {
       return Promise.resolve({ok: true});
     }
     const url = Object.assign(new URL(__opts.name), __opts.auth);
-    return fetch(`${url.href}_scheduler/jobs`)
-      .then(res => res.json())
-      .then(res => {
-        const errors = [];
-        for(const job of res.jobs) {
-          if(job.database === '_replicator' && job.history) {
-            const status = job.history[0];
-            status.type !== 'started' && status.type !== 'added' && errors.push(Object.assign(status, {
-              source: job.source,
-              target: job.target,
-              doc_id: job.doc_id,
-              start_time: job.start_time,
-            }))
+    function find_errors({errors, skip, limit}) {
+      return fetch(`${url.href}_scheduler/docs?skip=${skip}&limit=${limit}`)
+        .then(res => res.json())
+        .then(res => {
+          for(const doc of res.docs) {
+            if(doc.database === '_replicator') {
+              ['failed', 'error', 'crashing'].indexOf(doc.state) !== -1 && errors.push({
+                source: doc.source,
+                target: doc.target,
+                doc_id: doc.doc_id,
+                start_time: doc.start_time,
+                last_updated: doc.last_updated,
+                info: doc.info || '',
+              })
+            }
           }
-        }
-        return errors.length ? errors : {ok: true};
-      })
-      .catch((err) => {
-        console.error(err);
-        return err;
-      });
+          const processed = skip + limit;
+          return !res.total_rows || res.total_rows < processed
+            ? (errors.length ? errors : {ok: true})
+            : find_errors({errors, skip: processed, limit});
+        })
+        .catch((err) => {
+          console.error(err);
+          return err;
+        });
+      }
+    
+    return find_errors({errors: [], skip: 0, limit: 1000});
   }
 };
