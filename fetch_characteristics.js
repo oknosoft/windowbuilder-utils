@@ -1,10 +1,9 @@
 /**
- * ### Возвращает продукциям содержание
- * из последней непустой ревизии
+ * Подтягивает характеристики с другого сервера для заказов текущей базы
  *
- * @module revert_revs
+ * @module fetch_characteristics
  *
- * Created by Evgeniy Malyarov on 25.10.2018.
+ * Created by Evgeniy Malyarov on 20.12.2018.
  */
 
 /**
@@ -13,7 +12,8 @@
  * ZONE 21
  * DBPWD admin
  * DBUSER admin
- * COUCHPATH http://cou221:5984/wb_
+ * COUCHTARGET https://dh5.oknosoft.ru:221/wb_
+ * COUCHSOURCE https://dh2.oknosoft.ru:221/wb_
  */
 
 'use strict';
@@ -24,65 +24,64 @@ const PouchDB = require('./pouchdb').plugin(require('pouchdb-find'));
 debug('required');
 
 // инициализируем параметры сеанса и метаданные
-const {DBUSER, DBPWD, COUCHPATH, ZONE} = process.env;
+const {DBUSER, DBPWD, COUCHSOURCE, COUCHTARGET, ZONE} = process.env;
 const prefix = 'wb_';
-const start = '2018-10-24T15:31';
 const blank_guid = '00000000-0000-0000-0000-000000000000';
+const packet = 50;
+const buffer = [];
 const stat = {
   doc_count: 0,
   prod_count: 0,
-  err_prods: [],
-  err_docs: [],
 };
 
-const src = new PouchDB(`${COUCHPATH}${ZONE}_doc`, {
+const src = new PouchDB(`${COUCHSOURCE}${ZONE}_doc`, {
   auth: {
     username: DBUSER,
     password: DBPWD
   },
-  skip_setup: true,
-  ajax: {timeout: 100000}
+  skip_setup: true
+});
+
+const tgt = new PouchDB(`${COUCHTARGET}${ZONE}_doc`, {
+  auth: {
+    username: DBUSER,
+    password: DBPWD
+  },
+  skip_setup: true
 });
 
 src.info()
   .then((info) => {
     debug(`connected to ${info.host}, doc count: ${info.doc_count}`);
-    return process_files();
+    return tgt.info();
+  })
+  .then((info) => {
+    debug(`connected to ${info.host}, doc count: ${info.doc_count}`);
+    return process_fragment();
   })
   .then((res) => {
     debug('all done');
     console.log(stat);
   })
   .catch(err => {
-    debug(err)
+    debug(err);
   });
-
-function process_files() {
-  for(const file of ['errors.json', 'errors2.json', 'errors3.json']) {
-    for(const ox of require(`./img/${file}`).err_prods) {
-      stat.err_prods.push(ox);
-    }
-  }
-  return stat.err_prods.reduce(revert_production, Promise.resolve());
-}
-
 
 // обрабатывает заказы пачками по 100
 function process_fragment(bookmark) {
-  return src.find({
+  return tgt.find({
     selector: {
-      class_name: 'doc.calc_order',
-      date: {$gte: start},
-      search: {$gte: null}
+      class_name: 'doc.calc_order'
     },
-    limit: 100,
+    limit: packet,
     bookmark,
     fields: ['_id', 'date', 'number_doc', 'production']
   })
     .then(({docs, bookmark}) => {
       return docs.reduce(process_doc, Promise.resolve())
         .then(() => {
-          if(docs.length === 100) {
+          if(docs.length === packet) {
+            debug(stat);
             return process_fragment(bookmark);
           }
         });
@@ -92,11 +91,9 @@ function process_fragment(bookmark) {
 // обрабатывает конкретный документ
 function process_doc(sum, doc) {
   return sum.then(() => load_production(doc)
-    .then((prod) => {
-      if(prod.length) {
-        stat.err_docs.push(doc);
-      }
-      return prod.reduce(revert_production, Promise.resolve());
+    .then((keys) => {
+      buffer.push.apply(buffer, keys);
+      return buffer.length > packet ? fetch_production(buffer) : Promise.resolve();
     }));
 }
 
@@ -107,28 +104,34 @@ function load_production(doc) {
     const keys = doc.production
       .filter(({characteristic}) => characteristic && characteristic !== blank_guid)
       .map(({characteristic}) => `cat.characteristics|${characteristic}`);
-    return src.allDocs({keys, include_docs: true})
+    return tgt.allDocs({keys, include_docs: false})
       .then(({rows}) => {
         stat.prod_count += rows.length;
-        return rows
-          .filter((row) => !row.doc || !row.doc.specification)
-          .map((row) => row.doc || {_id: row.key, calc_order: doc._id.substr(15)});
+        return src.allDocs({keys, include_docs: false})
+          .then((docs) => {
+            const res = [];
+            for(let i = 0; i < docs.rows.length; i++) {
+              if(!docs.rows[i].value) {
+                continue;
+              }
+              if(rows[i].value && docs.rows[i].value.rev === rows[i].value.rev) {
+                continue;
+              }
+              res.push(docs.rows[i].key);
+            }
+            return res;
+          })
       });
   }
   return Promise.resolve();
 }
 
 // контролирует заполненность и пытается восстановить из версии
-function revert_production(sum, ox) {
-  return sum.then(() => {
-    // stat.err_prods.push(ox);
-    return src.get(ox._id, {open_revs: 'all'});
-  })
-    .then((res) => {
-      stat.prod_count++;
-      res = null;
-    })
-    .catch((err) => {
-      err = null;
+function fetch_production() {
+  const keys = buffer.splice(0);
+  buffer.length = 0;
+  return src.allDocs({keys, include_docs: true})
+    .then(({rows}) => {
+      return tgt.bulkDocs(rows.map((v) => v.doc), {new_edits: false});
     });
 }
