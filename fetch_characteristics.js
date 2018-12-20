@@ -39,7 +39,8 @@ const src = new PouchDB(`${COUCHSOURCE}${ZONE}_doc`, {
     username: DBUSER,
     password: DBPWD
   },
-  skip_setup: true
+  skip_setup: true,
+  ajax: {timeout: 100000}
 });
 
 const tgt = new PouchDB(`${COUCHTARGET}${ZONE}_doc`, {
@@ -47,7 +48,8 @@ const tgt = new PouchDB(`${COUCHTARGET}${ZONE}_doc`, {
     username: DBUSER,
     password: DBPWD
   },
-  skip_setup: true
+  skip_setup: true,
+  ajax: {timeout: 100000}
 });
 
 src.info()
@@ -132,6 +134,8 @@ function fetch_production() {
   buffer.length = 0;
   return src.allDocs({keys, include_docs: true})
     .then(({rows}) => {
-      return tgt.bulkDocs(rows.map((v) => v.doc), {new_edits: false});
+      const docs = rows.filter((v) => v.doc).map((v) => v.doc);
+      debug(`writing ${docs.length} docs`);
+      return tgt.bulkDocs(docs, {new_edits: false});
     });
 }
