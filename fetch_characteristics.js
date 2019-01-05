@@ -27,8 +27,9 @@ debug('required');
 const {DBUSER, DBPWD, COUCHSOURCE, COUCHTARGET, ZONE} = process.env;
 const prefix = 'wb_';
 const blank_guid = '00000000-0000-0000-0000-000000000000';
-const packet = 50;
+const packet = 100;
 const buffer = [];
+const src_buffer = [];
 const stat = {
   doc_count: 0,
   prod_count: 0,
@@ -61,13 +62,20 @@ src.info()
     debug(`connected to ${info.host}, doc count: ${info.doc_count}`);
     return process_fragment();
   })
-  .then((res) => {
+  .then(() => {
+    return process_doc(Promise.resolve(), {production: []}, true);
+  })
+  .then(() => {
     debug('all done');
-    console.log(stat);
+    debug_stat();
   })
   .catch(err => {
     debug(err);
   });
+
+function debug_stat() {
+  debug(Object.assign({src_buffer: src_buffer.length, buffer: buffer.length}, stat));
+}
 
 // обрабатывает заказы пачками по 100
 function process_fragment(bookmark) {
@@ -83,7 +91,7 @@ function process_fragment(bookmark) {
       return docs.reduce(process_doc, Promise.resolve())
         .then(() => {
           if(docs.length === packet) {
-            debug(stat);
+            debug_stat();
             return process_fragment(bookmark);
           }
         });
@@ -91,21 +99,26 @@ function process_fragment(bookmark) {
 }
 
 // обрабатывает конкретный документ
-function process_doc(sum, doc) {
-  return sum.then(() => load_production(doc)
+function process_doc(sum, doc, forse) {
+  return sum.then(() => load_production(doc, forse)
     .then((keys) => {
       buffer.push.apply(buffer, keys);
-      return buffer.length > packet ? fetch_production(buffer) : Promise.resolve();
+      return (buffer.length > packet || forse === true) ? fetch_production(buffer) : Promise.resolve();
     }));
 }
 
 // читает продукцию заказа
-function load_production(doc) {
+function load_production(doc, forse) {
   stat.doc_count++;
   if(doc.production) {
-    const keys = doc.production
+    let keys = doc.production
       .filter(({characteristic}) => characteristic && characteristic !== blank_guid)
       .map(({characteristic}) => `cat.characteristics|${characteristic}`);
+    src_buffer.push.apply(src_buffer, keys);
+    if(src_buffer.length < packet && forse !== true) {
+      return Promise.resolve();
+    }
+    keys = src_buffer.splice(0);
     return tgt.allDocs({keys, include_docs: false})
       .then(({rows}) => {
         stat.prod_count += rows.length;
@@ -131,7 +144,6 @@ function load_production(doc) {
 // контролирует заполненность и пытается восстановить из версии
 function fetch_production() {
   const keys = buffer.splice(0);
-  buffer.length = 0;
   return src.allDocs({keys, include_docs: true})
     .then(({rows}) => {
       const docs = rows.filter((v) => v.doc).map((v) => v.doc);
