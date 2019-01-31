@@ -1,5 +1,6 @@
 /**
  * ### Модуль переноса единиц измерения вовнутрь номенклатур
+ * дополнительно, устанавливает НДС20
  *
  * @module  move_units
  *
@@ -35,6 +36,7 @@ const db = new PouchDB(`${COUCHPATH}${ZONE}_ram`, {
     password: DBPWD
   },
   skip_setup: true,
+  ajax: {timeout: 100000}
 });
 
 db.info()
@@ -47,13 +49,12 @@ db.info()
 function bulk(rows) {
   return () => {
     step++;
-    debug(`saved ${step * 300}`);
+    debug(`saved ${step * 150}`);
     return db.bulkDocs(rows);
   };
 }
 
 function move_units(bookmark) {
-  const opt = {limit: 100};
 
   // получаем в ОЗУ все номенклатуры и единицы измерения
   return db.find({selector: {class_name: {$in: ['cat.nom', 'cat.nom_units']}}, bookmark, limit: 100000})
@@ -79,21 +80,30 @@ function move_units(bookmark) {
         let ch;
         const ref = nom._id.substr(8);
         for(const unit of units) {
-          if(unit.owner === ref) {
+          if((unit.owner === ref) || (unit.owner && unit.owner.ref === ref)) {
             if(nunits) {
               nunits += '\n';
             }
-            nunits += `${unit._id.substr(14)},${unit.id},${unit.name},${unit.qualifier_unit},${unit.heft},${unit.volume},${unit.coefficient},${unit.rounding_threshold}`;
+            nunits += `${unit._id.substr(14)},${unit.id},${unit.name},${
+              typeof unit.qualifier_unit === 'object' ? unit.qualifier_unit.ref : unit.qualifier_unit},${unit.heft},${
+              unit.volume},${unit.coefficient},${unit.rounding_threshold || ''}`;
           }
         }
         for(const fld in nom) {
-          if(nom[fld] === blank) {
+          if((nom[fld] === blank) || (nom[fld] && nom[fld].ref === blank)) {
             nom[fld] = '';
             ch = true;
           }
         }
-        if(ch || (nom.units !== nunits && nunits)) {
+        if((nom.vat_rate === 'НДС18') || (nom.vat_rate && nom.vat_rate.name === 'НДС18')) {
+          nom.vat_rate = 'НДС20';
+          ch = true;
+        }
+        if(nom.units !== nunits && nunits) {
           nom.units = nunits;
+          ch = true;
+        }
+        if(ch) {
           rows.push(nom);
         }
       }
@@ -104,7 +114,7 @@ function move_units(bookmark) {
       let res = Promise.resolve();
       let tmp = [];
       rows.forEach((row) => {
-        if(tmp.length < 300) {
+        if(tmp.length < 150) {
           tmp.push(row);
         }
         else {
