@@ -79,11 +79,9 @@ function file_to_json(name) {
         const ids = new Set();
         
         rl.on('line', line => {
-          const match = regex.exec(line);
-          if (match) {
-            for (const item of match) {
-              ids.add(item);
-            }
+          let match;
+          while ((match = regex.exec(line)) !== null) {
+            ids.add(match[0]);
           }
         });
         
