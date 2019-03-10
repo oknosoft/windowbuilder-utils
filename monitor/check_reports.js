@@ -8,6 +8,8 @@
 
 const fetch = require('node-fetch');
 
+const {DBUSER, DBPWD} = process.env;
+
 module.exports = {
   name: 'reports',        // имя проверки в статистике
   order: 3,               // порядок исполнения проверки
@@ -18,7 +20,10 @@ module.exports = {
     if(!http) {
       return Promise.resolve({ok: true});
     }
-    return fetch(http)
+    return fetch(http, {
+      credentials: 'include',
+      headers: {Authorization: `Basic ${Buffer.from(DBUSER + ":" + DBPWD).toString('base64')}`},
+    })
       .then(res => {
         if(res.status === 200) {
           return {ok: true};
