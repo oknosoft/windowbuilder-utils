@@ -9,7 +9,7 @@
 const PouchDB = require('../pouchdb').plugin(require('pouchdb-find'));
 const {DBUSER, DBPWD} = process.env;
 
-let seq;
+const local_id = '_local/repl_users';
 
 function find_users({users, db, since, limit}) {
   return db.changes({since, limit, include_docs: true})
@@ -98,19 +98,32 @@ module.exports = function repl(servers, options) {
 
         return src_db.info()
           .then(({update_seq}) => {
-            if(!seq) {
-              seq = update_seq;
-            }
-            else {
-              return seq !== update_seq && update_seq;
-            }
+            return src_db.get(local_id)
+              .catch(err => {
+                if (err.status === 404) {
+                  return {_id: local_id};
+                }
+              })
+              .then(rev => {
+                if (rev) {
+                  if (!rev.last_seq) {
+                    rev.last_seq = update_seq;
+                    return src_db.put(rev)
+                      .then(() => {})
+                      .catch(() => {});
+                  } else if (rev.last_seq !== update_seq) {
+                    rev.last_seq = update_seq;
+                    return rev;
+                  }
+                }
+              });
           });
       }
     })
 
     // перезапускаем
-    .then((update_seq) => {
-      if(update_seq) {
+    .then(rev => {
+      if(rev) {
         if (use_repl) {
           for(const db of tgt) {
             queries.push(db.get(db._users_repl)
@@ -125,7 +138,7 @@ module.exports = function repl(servers, options) {
           }
           return Promise.all(queries)
             .then(() => {
-              seq = update_seq;
+              return src_db.put(rev);
             });
         } else {
           return find_users({users: [], db: src_db, since: seq, limit: 100})
@@ -155,7 +168,7 @@ module.exports = function repl(servers, options) {
               }
               return Promise.all(queries)
                 .then(() => {
-                  seq = update_seq;
+                  return src_db.put(rev);
                 });
             });
         }
