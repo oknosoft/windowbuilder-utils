@@ -24,6 +24,9 @@ const debug = require('debug')('wb:move_calc_order');
 const PouchDB = require('./pouchdb')
   .plugin(require('pouchdb-find'));
 
+// нулевой guid
+const blank_guid = "00000000-0000-0000-0000-000000000000";
+
 debug('required');
 
 const yargs = require('yargs')
@@ -188,6 +191,9 @@ async function move_calc_orders(src, dst, docs) {
         
         // переносим характеристики продукций
         for (const prod of res.production) {
+          if (prod.characteristic === blank_guid) {
+            continue;
+          }
           // загружаем характеристику
           await src.get(`cat.characteristics|${prod.characteristic}`)
             .then(async res => {
@@ -223,11 +229,11 @@ function update_doc(src, dst, doc) {
     .then(res => {
       // удаляем документы в старом месте
       for (const doc of rows) {
-        for (const _fld in doc) {
+        /*for (const _fld in doc) {
           if (_fld[0] !== '_') {
             delete doc[_fld];
           }
-        }
+        }*/
         doc._deleted = true;
       }
       return src.bulkDocs(rows)
