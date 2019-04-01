@@ -9,86 +9,169 @@
 const PouchDB = require('../pouchdb').plugin(require('pouchdb-find'));
 const {DBUSER, DBPWD} = process.env;
 
-let seq;
+const local_id = '_local/repl_users';
 
-module.exports = function repl(servers) {
+function find_users({users, db, since, limit}) {
+  return db.changes({since, limit, include_docs: true})
+    .then(res => {
+      for (const result of res.results) {
+        users.push(result.doc);
+      }
+
+      return res.results.length < limit ? users
+        : find_users({users, db, since: res.last_seq, limit});
+    });
+}
+
+module.exports = function repl(servers, options) {
 
   // создаём базы
+  const use_repl = options && options.use_repl;
   const src = [];
   const tgt = [];
   const queries = [];
+  let src_db;
 
-  // находим базу, в которой _users не реплицируется - это будет корень
-  for(const server of servers) {
-    const db = new PouchDB(`${server.url}_replicator`, {
-      auth: {
-        username: DBUSER,
-        password: DBPWD
-      },
-      skip_setup: true,
-      ajax: {timeout: 10000}
-    });
-    queries.push(db.find({
-      selector: {
-        target: {$regex: "/_users$"}
-      },
-      fields: ["_id"]
-    }).then(({docs}) => {
-      if(docs.length){
-        db._users_repl = docs[0]._id;
-        tgt.push(db);
-      }
-      else {
-        src.push(db);
-      }
-    }).catch((err) => {
-      console.log(err);
-    }));
+  // находим базу, в которой _users не реплицируется - это будет корень,
+  // если репликации не используем, корневой базой является первая по списку
+  for(const {url} of servers) {
+    if (!url)
+      continue;
+    
+    // режим перезапуска репликаций
+    if (use_repl) {
+      const db = new PouchDB(`${url}_replicator`, {
+        auth: {
+          username: DBUSER,
+          password: DBPWD
+        },
+        skip_setup: true,
+        ajax: {timeout: 10000}
+      });
+      queries.push(db.find({
+        selector: {
+          target: {$regex: "/_users$"}
+        },
+        fields: ["_id"]
+      }).then(({docs}) => {
+        if(docs.length){
+          db._users_repl = docs[0]._id;
+          tgt.push(db);
+        }
+        else {
+          src.push(db);
+        }
+      }).catch((err) => {
+        console.log(err);
+      }));
+    } else {
+      const src_tgt = src.length ? tgt : src;
+      const db = new PouchDB(`${url}_users`, {
+        auth: {
+          username: DBUSER,
+          password: DBPWD
+        },
+        skip_setup: true,
+        ajax: {timeout: 10000}
+      });
+      src_tgt.push(db);
+    }
   }
 
   // сравниваем feed
-  Promise.all(queries)
+  return Promise.all(queries)
     .then(() => {
       queries.length = 0;
       if(src.length) {
-        return new PouchDB(src[0].name.replace('_replicator', '_users'), {
-          auth: {
-            username: DBUSER,
-            password: DBPWD
-          },
-          skip_setup: true,
-          ajax: {timeout: 10000}
-        })
-          .info()
+        if (use_repl) {
+          src_db = new PouchDB(src[0].name.replace('_replicator', '_users'), {
+            auth: {
+              username: DBUSER,
+              password: DBPWD
+            },
+            skip_setup: true,
+            ajax: {timeout: 10000}
+          });
+        } else {
+          src_db = src[0];
+        }
+
+        return src_db.info()
           .then(({update_seq}) => {
-            if(!seq) {
-              seq = update_seq;
-            }
-            else {
-              return seq !== update_seq && update_seq;
-            }
+            return src_db.get(local_id)
+              .catch(err => {
+                if (err.status === 404) {
+                  return {_id: local_id};
+                }
+              })
+              .then(rev => {
+                if (rev) {
+                  if (!rev.last_seq) {
+                    rev.last_seq = update_seq;
+                    return src_db.put(rev)
+                      .then(() => {})
+                      .catch(() => {});
+                  } else if (rev.last_seq !== update_seq) {
+                    rev.last_seq = update_seq;
+                    return rev;
+                  }
+                }
+              });
           });
       }
     })
 
-    // перезапускам
-    .then((update_seq) => {
-      if(update_seq) {
-        for(const db of tgt) {
-          queries.push(db.get(db._users_repl)
-            .then((doc) => {
-              for(const fld in doc) {
-                if(fld !== '_id' && fld !== '_rev' && fld[0] === '_') {
-                  delete doc[fld];
+    // перезапускаем
+    .then(rev => {
+      if(rev) {
+        if (use_repl) {
+          for(const db of tgt) {
+            queries.push(db.get(db._users_repl)
+              .then((doc) => {
+                for(const fld in doc) {
+                  if(fld !== '_id' && fld !== '_rev' && fld[0] === '_') {
+                    delete doc[fld];
+                  }
                 }
+                return db.put(doc);
+              }));
+          }
+          return Promise.all(queries)
+            .then(() => {
+              return src_db.put(rev);
+            });
+        } else {
+          return find_users({users: [], db: src_db, since: seq, limit: 100})
+            .then(docs => {
+              for(const db of tgt) {
+                queries.push(db.bulkDocs(docs, {new_edits: false})
+                  .then(res => {
+                    // проверяем документы на конфликтные ревизии
+                    return docs.reduce((prev, doc) => {
+                      return prev.then(() => {
+                        return db.get(doc._id, {conflicts: true})
+                          .then(res => {
+                            // удаляем конфликтные ревизии документа
+                            if (res._conflicts) {
+                              return res._conflicts.reduce((prev, rev) => {
+                                return prev.then(() => {
+                                  return db.remove(res._id, rev)
+                                    .catch(err => {});
+                                });
+                              }, Promise.resolve());
+                            }
+                          })
+                          .catch(err => {});
+                      });
+                    }, Promise.resolve());
+                  }));
               }
-              return db.put(doc);
-            }));
+              return Promise.all(queries)
+                .then(() => {
+                  return src_db.put(rev);
+                });
+            });
         }
-        Promise.all(queries)
-          .then(() => {
-            seq = update_seq;
-          });
       }
     });
 };
