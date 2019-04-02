@@ -112,8 +112,7 @@ module.exports = function repl(servers, options) {
                       .then(() => {})
                       .catch(() => {});
                   } else if (rev.last_seq !== update_seq) {
-                    rev.last_seq = update_seq;
-                    return rev;
+                    return {rev, update_seq};
                   }
                 }
               });
@@ -122,8 +121,8 @@ module.exports = function repl(servers, options) {
     })
 
     // перезапускаем
-    .then(rev => {
-      if(rev) {
+    .then(res => {
+      if(res) {
         if (use_repl) {
           for(const db of tgt) {
             queries.push(db.get(db._users_repl)
@@ -138,10 +137,11 @@ module.exports = function repl(servers, options) {
           }
           return Promise.all(queries)
             .then(() => {
-              return src_db.put(rev);
+              res.rev.last_seq = res.update_seq;
+              return src_db.put(res.rev);
             });
         } else {
-          return find_users({users: [], db: src_db, since: seq, limit: 100})
+          return find_users({users: [], db: src_db, since: res.rev.last_seq, limit: 100})
             .then(docs => {
               for(const db of tgt) {
                 queries.push(db.bulkDocs(docs, {new_edits: false})
@@ -168,7 +168,8 @@ module.exports = function repl(servers, options) {
               }
               return Promise.all(queries)
                 .then(() => {
-                  return src_db.put(rev);
+                  res.rev.last_seq = res.update_seq;
+                  return src_db.put(res.rev);
                 });
             });
         }
