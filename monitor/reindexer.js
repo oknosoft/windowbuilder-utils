@@ -20,42 +20,40 @@
 
 require('http').globalAgent.maxSockets = 35;
 
-const debug = require('debug')('wb:reindex');
-const PouchDB = require('./pouchdb');
-const fs = require('fs');
-
-debug('required');
+const PouchDB = require('../pouchdb');
 
 // инициализируем параметры сеанса и метаданные
-const {DBUSER, DBPWD, COUCHPATH, ZONE, COMPACT} = process.env;
-const prefix = 'wb_';
-let index = 1;
+const {DBUSER, DBPWD} = process.env;
 
-// получаем массив всех баз
-new PouchDB(COUCHPATH.replace(prefix, '_all_dbs'), {
-  auth: {
-    username: DBUSER,
-    password: DBPWD
-  },
-  skip_setup: true,
-  ajax: {timeout: 100000}
-}).info()
-  .then(next);
+module.exports = function (url) {
 
-// перебирает базы в асинхронном цикле
-function next(dbs) {
+  let index = 1;
 
-  index++;
-  let name = dbs[index];
-  if(name && name[0] !== '_' && name.indexOf('_meta') === -1) {
-    name = name.replace(`${prefix}${ZONE}_`, '');
-    return reindex(name)
-      .then(() => next(dbs));
+  // перебирает базы в асинхронном цикле
+  function next(dbs) {
+    index++;
+    let name = dbs[index];
+    if(name && name[0] !== '_') {
+      return reindex(`${url}/${name}`)
+        .then(() => next(dbs));
+    }
+    else if(name) {
+      return next(dbs);
+    }
   }
-  else if(name) {
-    return next(dbs);
-  }
+
+  // получаем массив всех баз
+  return new PouchDB(`${url}/_all_dbs`, {
+    auth: {
+      username: DBUSER,
+      password: DBPWD
+    },
+    skip_setup: true,
+    ajax: {timeout: 100000}
+  }).info()
+    .then(next);
 }
+
 
 function reindex(name) {
   // получаем базы

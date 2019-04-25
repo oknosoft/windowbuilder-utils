@@ -28,6 +28,8 @@ const {CronJob} = require('cron');
 const mailer = require('./mailer');
 const reset = require('./reset');
 const repl_users = require('./repl_users');
+const reindexer = require('./reindexer');
+const log_err = require('./log_err');
 
 const {DBUSER, DBPWD, COUCHDBS, REPORTS, REPORTSSSH} = process.env;
 
@@ -99,13 +101,13 @@ function monitor() {
   let text = '';
   const reboot = new Set();
 
-  console.log(dateStr());
+  console.log(log_err.dateStr());
 
   for(const server of servers) {
     for (const check of checks) {
       if(server.errors[check.name] && server.errors[check.name].length >= check.mail_on) {
         text +=
-`time: ${dateStr()}
+`time: ${log_err.dateStr()}
 server: ${server.url || server.ssh}
 check: ${check.name} ${JSON.stringify(server.errors[check.name])}
 -----
@@ -126,30 +128,45 @@ check: ${check.name} ${JSON.stringify(server.errors[check.name])}
           }
         }
       })
-      .catch((err) => console.error(err));
+      .catch(log_err);
     for(const server of reboot) {
       reset({name: server.url, ssh: server.ssh});
     }
   }
 }
 
-function dateStr() {
-  const d = new Date();
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-  return `${d.toISOString().replace('Z', '')} GMT+${-d.getTimezoneOffset() / 60}`;
+
+/**
+ * отправляет письмо, что всё ок
+ */
+function health() {
+  mailer({text: `time: ${log_err.dateStr()}\nstatus: ok`, status: 'ok'});
 }
 
-function health() {
-  mailer({text: `time: ${dateStr()}\nstatus: ok`, status: 'ok'});
+/**
+ * Бежит по всем серверам и выполняет обслуживание
+ */
+function reindex() {
+  let res = Promise.resolve();
+  for(const {url} of servers) {
+    if(url) {
+      res = res.then(() => reindexer(url));
+    }
+  }
+  return res.catch(log_err);
 }
 
 //health();
 //repl_users(servers);
 
-console.log(dateStr());
+// подключаем http-интерфейс
+require('./show_log')(servers);
+
+console.log(log_err.dateStr());
 console.log('execute every 2 minute');
-new CronJob('1 */2 * * * *', execute, null, true);
+//new CronJob('0 */2 * * * *', execute, null, true);
 console.log('monitor every 6 minute');
-new CronJob('30 */6 * * * *', monitor, null, true);
+//new CronJob('0 */6 * * * *', monitor, null, true);
 console.log('health every day');
-new CronJob('0 0 9,18 * * *', health, null, true);
+//new CronJob('0 0 9,18 * * *', health, null, true);
+//new CronJob('0 */1 * * * *', reindex, null, true);

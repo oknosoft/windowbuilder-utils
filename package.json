@@ -9,16 +9,19 @@
   "author": "Evgeniy Malyarov <info@oknosoft.ru> (http://www.oknosoft.ru)",
   "license": "MIT",
   "dependencies": {
-    "cron": "1.3.0",
-    "debug": "^3.1.0",
-    "jszip": "^3.1.5",
+    "cron": "1.7.0",
+    "debug": "^4.1",
+    "jszip": "^3.2",
+    "koa": "^2.7.0",
     "memorystream": "^0.3.1",
-    "node-fetch": "^2.1.2",
-    "node-ssh": "^5.1.2",
-    "nodemailer": "^4.6.8",
+    "node-fetch": "^2.3",
+    "node-ssh": "^6.0",
+    "nodemailer": "^6.1",
     "pouchdb": "6.0.6",
     "pouchdb-find": "6.4.3",
     "pouchdb-replication-stream": "^1.2.9",
-    "yargs": "^11.0.0"
+    "reverse-line-reader": "^0.2.6",
+    "urlencode": "^1.1.0",
+    "yargs": "^13.2.2"
   }
 }

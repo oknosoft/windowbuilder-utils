@@ -6,6 +6,8 @@
  * Created by Evgeniy Malyarov on 20.08.2018.
  */
 
+const log_err = require('./log_err');
+
 module.exports = {
   name: 'ping',           // имя проверки в статистике
   order: 0,               // порядок исполнения проверки
@@ -17,9 +19,6 @@ module.exports = {
     }
     return db.info()
       .then(() => ({ok: true}))
-      .catch((err) => {
-        console.error(err);
-        return err;
-      });
+      .catch(log_err);
   }
 };

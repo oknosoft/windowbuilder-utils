@@ -8,6 +8,7 @@
 
 const fetch = require('node-fetch');
 const {URL} = require('url');
+const log_err = require('./log_err');
 
 module.exports = {
   name: 'replicate',      // имя проверки в статистике
@@ -41,10 +42,7 @@ module.exports = {
             ? (errors.length ? errors : {ok: true})
             : find_errors({errors, skip: processed, limit});
         })
-        .catch((err) => {
-          console.error(err);
-          return err;
-        });
+        .catch(log_err);
       }
     
     return find_errors({errors: [], skip: 0, limit: 1000});

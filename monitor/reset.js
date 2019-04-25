@@ -9,6 +9,7 @@
 const {URL} = require('url');
 const node_ssh = require('node-ssh');
 const {SSHUSER, SSHPWD} = process.env;
+const log_err = require('./log_err');
 
 module.exports = function reset({name, ssh}) {
   const shell = new node_ssh();
@@ -26,8 +27,5 @@ module.exports = function reset({name, ssh}) {
     .then((res) => {
       return shell.dispose();
     })
-    .catch((err) => {
-      console.error(err);
-      return err;
-    });
+    .catch(log_err);
 }

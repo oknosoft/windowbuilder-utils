@@ -7,6 +7,7 @@
  */
 
 const fetch = require('node-fetch');
+const log_err = require('./log_err');
 
 const {DBUSER, DBPWD} = process.env;
 
@@ -30,13 +31,9 @@ module.exports = {
         }
         else {
           const err = {status: res.status, message: res.statusText};
-          console.error(err);
-          return err;
+          return log_err(err);
         }
       })
-      .catch((err) => {
-        console.error(err);
-        return err;
-      });
+      .catch(log_err);
   }
 };
