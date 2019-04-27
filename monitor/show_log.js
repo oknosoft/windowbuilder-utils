@@ -10,15 +10,22 @@ const Koa = require('koa');
 const fs = require('fs');
 const fetch = require('node-fetch');
 const lineReader = require('reverse-line-reader');
+const log_err = require('./log_err');
 const port = 3013; // слушаем порт 3013
 const limit = 100; // по умолчанию, показываем 100 последних записей
-//const path = '/var/log/supervisor/monitor.';
-const path = 'D:\\\\TEMP\\monitor.';
+const path = '/var/log/supervisor/monitor.';
+//const path = 'D:\\\\TEMP\\monitor.';
 
 // для проверки авторизованности, бежим по всем серверам
-async function isAuthorised({authorization}, servers) {
+async function isAuthorised(ctx, servers) {
 
+  const {authorization} = ctx.req.headers
   if(!authorization) {
+    ctx.status = 401;
+    ctx.set({
+      'WWW-Authenticate': 'Basic realm="metadata.js monitor"'
+    });
+    ctx.body = 'Укажите логин и пароль';
     return false;
   }
 
@@ -49,7 +56,13 @@ async function isAuthorised({authorization}, servers) {
         .catch(() => resolve(is_auth));
     }));
   }
-  return res;
+  return res.then(() => {
+    if(is_auth) {
+      return is_auth;
+    }
+    log_err({ip: ctx.request.headers["x-real-ip"] || ctx.request.ip, authorization});
+    ctx.throw(403, 'access denied');
+  });
 }
 
 module.exports = function (servers) {
@@ -57,7 +70,7 @@ module.exports = function (servers) {
   const app = new Koa();
 
   app.use(async ctx => {
-    if(await isAuthorised(ctx.req.headers, servers)) {
+    if(await isAuthorised(ctx, servers)) {
 
       // read 10 log lines:
       const res = {
@@ -79,9 +92,6 @@ module.exports = function (servers) {
       }
 
       ctx.body = res;
-    }
-    else {
-      ctx.throw(403, 'access denied');
     }
   });
 

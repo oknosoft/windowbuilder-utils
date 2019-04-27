@@ -164,9 +164,10 @@ require('./show_log')(servers);
 
 console.log(log_err.dateStr());
 console.log('execute every 2 minute');
-//new CronJob('0 */2 * * * *', execute, null, true);
+new CronJob('0 */2 * * * *', execute, null, true);
 console.log('monitor every 6 minute');
-//new CronJob('0 */6 * * * *', monitor, null, true);
-console.log('health every day');
+new CronJob('0 */6 * * * *', monitor, null, true);
 //new CronJob('0 0 9,18 * * *', health, null, true);
-//new CronJob('0 */1 * * * *', reindex, null, true);
+console.log('reindex every day');
+new CronJob('0 0 3 * * *', reindex, null, true);
+

@@ -19,7 +19,7 @@ function dateStr() {
 }
 
 module.exports = function (err) {
-  const res = Object.assign({time: dateStr()}, typeof err === 'string' ? {err} : err);
+  const res = Object.assign({}, typeof err === 'string' ? {err} : err);
   for(const fld in res) {
     if(typeof res[fld] === 'string') {
       for(const credential of credentials) {
@@ -27,7 +27,7 @@ module.exports = function (err) {
       }
     }
   }
-  console.error(JSON.stringify(res));
+  console.error(dateStr() + '\t' + JSON.stringify(res));
   return err;
 };
 
