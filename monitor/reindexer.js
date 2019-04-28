@@ -8,12 +8,9 @@
 
 /**
  * ### Переменные окружения
- * DEBUG "wb:*,-not_this"
- * ZONE 21
  * DBPWD admin
  * DBUSER admin
- * COUCHPATH http://cou221:5984/wb_
- * COMPACT 1
+ * IGN_ROOT :76/,:177/
  */
 
 'use strict';
@@ -25,7 +22,11 @@ const fetch = require('node-fetch');
 const log_err = require('./log_err');
 
 // инициализируем параметры сеанса и метаданные
-const {DBUSER, DBPWD} = process.env;
+const {DBUSER, DBPWD, IGN_ROOT} = process.env;
+
+// если в адресе сервера есть эти порты, индексы в корневой базе не пересчитываем
+const ign_root = IGN_ROOT ? IGN_ROOT.split(',') : [];
+
 const auth = {
   credentials: 'include',
   headers: {
@@ -92,7 +93,7 @@ function compact(db) {
     };
 
     fetch(`${db.name}/_compact`, opts({method: 'POST'}))
-      .then((res) => setTimeout(check, 8000));
+      .then((res) => setTimeout(check, 6000));
   });
 }
 
@@ -106,6 +107,9 @@ function revs_limit(name, count) {
 
 function rebuild_indexes(db) {
   let promises = Promise.resolve();
+  if(db.name.endsWith('_doc') && ign_root.some((port) => db.name.includes(port))) {
+    return promises;
+  }
   return db.allDocs({
       include_docs: true,
       startkey: '_design/',
@@ -145,7 +149,7 @@ function rebuild_indexes(db) {
         }
         return promises;
       })
-    .then(() => sleep(5000));
+    .then(() => sleep(3000));
 }
 
 function reindex(name) {
@@ -159,6 +163,7 @@ function reindex(name) {
     ajax: {timeout: 100000}
   });
 
+  log_err({log: true, reindex: name});
   return db.info()
     .then((info) => {
       if(!info.compact_running) {

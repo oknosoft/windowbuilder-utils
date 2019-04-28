@@ -27,7 +27,13 @@ module.exports = function (err) {
       }
     }
   }
-  console.error(dateStr() + '\t' + JSON.stringify(res));
+  if(res.log === true) {
+    delete res.log;
+    console.log(dateStr() + '\t' + JSON.stringify(res));
+  }
+  else {
+    console.error(dateStr() + '\t' + JSON.stringify(res));
+  }
   return err;
 };
 

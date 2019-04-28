@@ -158,6 +158,7 @@ function reindex() {
 
 //health();
 //repl_users(servers);
+//reindex();
 
 // подключаем http-интерфейс
 require('./show_log')(servers);
@@ -169,5 +170,5 @@ console.log('monitor every 6 minute');
 new CronJob('0 */6 * * * *', monitor, null, true);
 //new CronJob('0 0 9,18 * * *', health, null, true);
 console.log('reindex every day');
-new CronJob('0 0 3 * * *', reindex, null, true);
+new CronJob('0 0 1 * * *', reindex, null, true);
 

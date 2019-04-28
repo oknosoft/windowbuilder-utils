@@ -79,12 +79,12 @@ module.exports = function (servers) {
       };
 
       for(const area of 'out,err'.split(',')) {
-        let counter = 0;
+        let counter = 1;
         await lineReader.eachLine(`${path}${area}.log`, (line) => {
-          if(line) {
+          if(line && !line.startsWith('db.type()')) {
             counter++;
             res[area].push(line);
-            if(counter > 10) {
+            if(counter > limit) {
               return false;
             }
           }
