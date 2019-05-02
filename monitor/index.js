@@ -11,15 +11,12 @@
  * DEBUG "wb:*,-not_this"
  * DBPWD admin
  * DBUSER admin
- * COUCHDBS http://cou221:5984/,http://fl211:5984/
  * MAILUSER support@oknosoft.ru
  * MAILPWD xxx
  * MAILTO info@oknosoft.ru
  * MAILCC shirokov@ecookna.ru,nmivan@oknosoft.ru
  * SSHUSER root
  * SSHPWD xxx
- * REPORTS
- * REPORTSSSH
  */
 
 const PouchDB = require('../pouchdb');
@@ -30,13 +27,13 @@ const reset = require('./reset');
 const repl_users = require('./repl_users');
 const reindexer = require('./reindexer');
 const log_err = require('./log_err');
-
-const {DBUSER, DBPWD, COUCHDBS, REPORTS, REPORTSSSH} = process.env;
+const config = require('./config');
+const {DBUSER, DBPWD} = process.env;
 
 // массив серверов COUCHDB
-const servers = (COUCHDBS || '').split(',').map((url) => ({url, errors: {}}));
+const servers = config.couchdbs.map((url) => ({url, errors: {}}));
 // подмешиваем сюда другие серверы
-servers.push({http: REPORTS, ssh: REPORTSSSH, errors: {}});
+servers.push({http: config.reports, ssh: config.reportsssh, errors: {}});
 
 const checks = (() => {
   const res = [];
