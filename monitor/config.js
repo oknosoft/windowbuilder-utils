@@ -27,7 +27,8 @@ module.exports = {
       'https://dh4.oknosoft.ru:177',
       'https://dh21.oknosoft.ru:178',
       'https://dh21.oknosoft.ru:180',
-      'https://dh21.oknosoft.ru:112]',
+      'https://dh21.oknosoft.ru:112',
+      ]
   }],
   reports: 'https://zakaz.ecookna.ru/r/img/doc.calc_order/eb23b5e6-62fc-4834-8dae-5e3cf24e97af?glasses',
   reportsssh: 'dh5.oknosoft.ru:221',
