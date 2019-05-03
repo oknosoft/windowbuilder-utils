@@ -162,9 +162,9 @@ require('./show_log')(servers);
 
 log_err({start: 'execute every 2 minute', log: true});
 new CronJob('0 */2 * * * *', execute, null, true);
-log_err({start: 'monitor every 6 minute'});
+log_err({start: 'monitor every 6 minute', log: true});
 new CronJob('0 */6 * * * *', monitor, null, true);
 //new CronJob('0 0 9,18 * * *', health, null, true);
-log_err({start: 'reindex every day'});
+log_err({start: 'reindex every day', log: true});
 new CronJob('0 0 1 * * *', reindex, null, true);
 
