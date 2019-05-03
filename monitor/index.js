@@ -98,8 +98,9 @@ function monitor() {
   let text = '';
   const reboot = new Set();
 
+  log_err({monitor: servers.map((server) => server.url || server.ssh).join(','), log: true});
+
   for(const server of servers) {
-    log_err({monitor: server.url || server.ssh, log: true});
     for (const check of checks) {
       if(server.errors[check.name] && server.errors[check.name].length >= check.mail_on) {
         text +=
