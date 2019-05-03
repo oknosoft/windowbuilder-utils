@@ -10,7 +10,6 @@
  * ### Переменные окружения
  * DBPWD admin
  * DBUSER admin
- * IGN_ROOT :76/,:177/
  */
 
 'use strict';
@@ -22,10 +21,10 @@ const fetch = require('node-fetch');
 const log_err = require('./log_err');
 
 // инициализируем параметры сеанса и метаданные
-const {DBUSER, DBPWD, IGN_ROOT} = process.env;
+const {DBUSER, DBPWD} = process.env;
 
 // если в адресе сервера есть эти порты, индексы в корневой базе не пересчитываем
-const ign_root = IGN_ROOT ? IGN_ROOT.split(',') : [];
+const {ign_root} = require('./config');
 
 const auth = {
   credentials: 'include',
