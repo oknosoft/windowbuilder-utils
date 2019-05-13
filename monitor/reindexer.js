@@ -24,7 +24,7 @@ const log_err = require('./log_err');
 const {DBUSER, DBPWD} = process.env;
 
 // если в адресе сервера есть эти порты, индексы в корневой базе не пересчитываем
-const {ign_root} = require('./config');
+const {ign_root, compact_interval} = require('./config');
 
 const auth = {
   credentials: 'include',
@@ -61,10 +61,10 @@ module.exports = function (url) {
     ajax: {timeout: 100000}
   }).info()
     .then(next);
-}
+};
 
 function sleep(time, res) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     setTimeout(() => resolve(res), time);
   });
 }
@@ -75,7 +75,6 @@ function opts(opts) {
 
 function compact(db) {
   return new Promise((resolve, reject) => {
-
     const check = () => {
       db.info()
         .then((info) => {
@@ -127,7 +126,6 @@ function rebuild_indexes(db) {
               }
               else {
                 const selector = {
-                  //use_index: index,
                   limit: 1,
                   fields: ['_id'],
                   selector: {},
@@ -151,8 +149,14 @@ function rebuild_indexes(db) {
     .then(() => sleep(3000));
 }
 
+// удаляет с концами помеченные на удаление
+function purge(db) {
+  return Promise.resolve();
+}
+
+// выполняет обслуживание
 function reindex(name) {
-  // получаем базы
+  // получаем базу
   const db = new PouchDB(name, {
     auth: {
       username: DBUSER,
@@ -166,9 +170,14 @@ function reindex(name) {
   return db.info()
     .then((info) => {
       if(!info.compact_running) {
+        // установим revs_limit
         return revs_limit(name, name.endsWith('ram') ? 3 : 5)
+          // пересчитаем индексы
           .then(() => rebuild_indexes(db))
-          .then(() => compact(db))
+          // прочищаем
+          .then(() => purge(db))
+          // каждый третий день, сжимаем базы
+          .then(() => (new Date).getDay() % compact_interval === 0 && compact(db))
       }
     })
     .catch(log_err);
