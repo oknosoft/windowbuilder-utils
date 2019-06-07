@@ -26,15 +26,25 @@ module.exports = {
         .then(res => res.json())
         .then(res => {
           for(const doc of res.docs) {
-            if(doc.database === '_replicator') {
-              ['failed', 'error', 'crashing'].indexOf(doc.state) !== -1 && errors.push({
+            if(doc.database && doc.database.endsWith('_replicator') && ['failed', 'error', 'crashing'].includes(doc.state)) {
+
+              errors.push({
                 source: doc.source,
                 target: doc.target,
                 doc_id: doc.doc_id,
                 start_time: doc.start_time,
                 last_updated: doc.last_updated,
                 info: doc.info || '',
-              })
+              });
+
+              // fetch(`${url.href}${doc.database}/${doc.doc_id}`)
+              //   .then((res) => res.json())
+              //   .then(() => {
+              //
+              //   })
+              //   .catch((err) => {
+              //     err = null;
+              //   });
             }
           }
           const processed = skip + limit;

@@ -156,6 +156,7 @@ function reindex() {
 //health();
 //repl_users(servers);
 //reindex();
+//execute();
 
 // подключаем http-интерфейс
 require('./show_log')(servers);
