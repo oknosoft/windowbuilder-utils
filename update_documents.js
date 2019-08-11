@@ -1,5 +1,7 @@
 /**
  * ### Модуль перезаписи документов
+ * 
+ * - удаление документа
  *
  * @module  update_documents
  *
@@ -29,6 +31,7 @@ const yargs = require('yargs')
   .demand(1)
   .strict()
   .alias('d', 'database').nargs('d', 1).describe('d', 'Database name')
+  .alias('a', 'action').nargs('a', 1).describe('a', 'Action with document')
   .version('v', 'Show version', '0.0.1').alias('v', 'version')
   .help('h').alias('h', 'help')
   .example('node update_document id cat.characteristics|00000000-0000-0000-0000-000000000000', 'Update document with id `cat.characteristics|00000000-0000-0000-0000-000000000000`, database by default wb_21_doc')
@@ -38,7 +41,7 @@ const yargs = require('yargs')
     'Update document id `name`',
     yargs => yargs.positional('name', {type: 'string', describe: 'Empty document id'}),
     args => {
-      const { d, name } = args;
+      const { d, a, name } = args;
       if (name) {
 
         // инициализируем параметры сеанса и метаданные
@@ -60,7 +63,7 @@ const yargs = require('yargs')
           .then(info => {
             console.log(`connected to ${info.host}, doc count: ${info.doc_count}`);
           })
-          .then(() => update_document(db, name))
+          .then(() => update_document(db, name, a))
           .then(() => {
             console.log('all done');
           })
@@ -79,7 +82,7 @@ const yargs = require('yargs')
     'Update documents from JSON file `name`',
     yargs => yargs.positional('name', {type: 'string', describe: 'Empty JSON file name'}),
     args => {
-      const { d, name } = args;
+      const { d, a, name } = args;
       if (name) {
 
         // инициализируем параметры сеанса и метаданные
@@ -120,7 +123,7 @@ const yargs = require('yargs')
                   });
                 }
 
-                return update_documents(db, json);
+                return update_documents(db, json, a);
               });
           })
           .then(() => {
@@ -144,13 +147,13 @@ if (!argv._.length) {
   process.exit(1);
 }
 
-async function update_documents(db, json) {
+async function update_documents(db, json, action) {
   if (json.items && typeof json.items === 'object') {
     for (const field in json.items) {
       if (json.items[field] instanceof Array) {
         for (const item of json.items[field]) {
           if (typeof item === 'object' && item.ref) {
-            await update_document(db, `${field}|${item.ref}`);
+            await update_document(db, `${field}|${item.ref}`, action);
           }
         }
       }
@@ -158,13 +161,17 @@ async function update_documents(db, json) {
   }
 }
 
-function update_document(db, id) {
+function update_document(db, id, action) {
   console.log(`processing ${id} started`);
 
   // запрашиваем документ
   return db.get(id)
     .then(doc => {
       console.log(`${doc._id} loaded successful`);
+
+      if (action === 'delete' && doc._deleted !== true) {
+        doc._deleted = true;
+      }
 
       // обновляем документ
       return db.put(doc)
@@ -174,9 +181,6 @@ function update_document(db, id) {
         .catch(err => {
           console.log(`error update ${doc._id}: ${err && err.message}`);
         });
-    })
-    .then(() => {
-      console.log(`${id} updated successful`);
     })
     .catch(err => {
       console.log(`error get ${id}: ${err && err.message}`);
