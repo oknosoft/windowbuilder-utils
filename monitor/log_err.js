@@ -18,7 +18,7 @@ function dateStr() {
   return `${d.toISOString().replace('Z', '')} GMT+${-d.getTimezoneOffset() / 60}`;
 }
 
-module.exports = function (err) {
+function hideCredentials(err) {
   const res = Object.assign({}, typeof err === 'string' ? {err} : err);
   for(const fld in res) {
     if(typeof res[fld] === 'string') {
@@ -27,6 +27,11 @@ module.exports = function (err) {
       }
     }
   }
+  return res;
+}
+
+module.exports = function (err) {
+  const res = hideCredentials(err);
   if(res.log === true) {
     delete res.log;
     console.log(dateStr() + '\t' + JSON.stringify(res));
@@ -38,3 +43,4 @@ module.exports = function (err) {
 };
 
 module.exports.dateStr = dateStr;
+module.exports.hideCredentials = hideCredentials;

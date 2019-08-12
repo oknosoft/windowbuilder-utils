@@ -97,8 +97,13 @@ function execute() {
 function monitor() {
   let text = '';
   const reboot = new Set();
+  const srvs = new Set();
+  servers.forEach((server) => {
+    const parts = (server.url || server.ssh).replace(/^(.*)\/\//, '').replace(/\./g, ':').split(':');
+    srvs.add(`${parts[0]}:${parts[parts.length-1]}`);
+  })
 
-  log_err({monitor: servers.map((server) => server.url || server.ssh).join(','), log: true});
+  log_err({monitor: Array.from(srvs).sort().join(', '), log: true});
 
   for(const server of servers) {
     for (const check of checks) {
@@ -106,7 +111,7 @@ function monitor() {
         text +=
 `time: ${log_err.dateStr()}
 server: ${server.url || server.ssh}
-check: ${check.name} ${JSON.stringify(server.errors[check.name])}
+check: ${check.name} ${JSON.stringify(server.errors[check.name].map(log_err.hideCredentials))}
 -----
 `;
         check.reset && reboot.add(server);
@@ -132,14 +137,6 @@ check: ${check.name} ${JSON.stringify(server.errors[check.name])}
   }
 }
 
-
-/**
- * отправляет письмо, что всё ок
- */
-function health() {
-  mailer({text: `time: ${log_err.dateStr()}\nstatus: ok`, status: 'ok'});
-}
-
 /**
  * Бежит по всем серверам и выполняет обслуживание
  */
@@ -153,10 +150,10 @@ function reindex() {
   return res.catch(log_err);
 }
 
-//health();
 //repl_users(servers);
 //reindex();
 //execute();
+//monitor();
 
 // подключаем http-интерфейс
 require('./show_log')(servers);
@@ -165,7 +162,6 @@ log_err({start: 'execute every 2 minute', log: true});
 new CronJob('0 */2 * * * *', execute, null, true);
 log_err({start: 'monitor every 6 minute', log: true});
 new CronJob('0 */6 * * * *', monitor, null, true);
-//new CronJob('0 0 9,18 * * *', health, null, true);
 log_err({start: 'reindex every day', log: true});
 new CronJob('0 0 1 * * *', reindex, null, true);
 
