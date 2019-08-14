@@ -9,7 +9,6 @@
 /**
  * ### Переменные окружения
  * DEBUG "wb:*,-not_this"
- * ZONE 21
  * DBPWD admin
  * DBUSER admin
  * COUCHPATH http://cou221:5984/wb_

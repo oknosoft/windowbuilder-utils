@@ -9,7 +9,6 @@
 /**
  * ### Переменные окружения
  * DEBUG "wb:*,-not_this"
- * ZONE 21
  * DBPWD admin
  * DBUSER admin
  * COUCHPATH http://cou221:5984/wb_
@@ -46,7 +45,10 @@ const yargs = require('yargs')
         const {DBUSER, DBPWD, COUCHPATH, ZONE} = process.env;
 
         // подключаемся к базе данных
-        dst = new PouchDB(`${COUCHPATH}${ZONE}_${from.indexOf('doc') !== -1 ? 'doc' : 'ram'}`, {
+        const prefix = 'wb_';
+        const url = from.includes('_meta') ? `${COUCHPATH}meta` : `${COUCHPATH}${ZONE}_${from.includes('_doc') ? 'doc' : 'ram'}`;
+
+        dst = new PouchDB(url, {
           auth: {
             username: DBUSER,
             password: DBPWD
