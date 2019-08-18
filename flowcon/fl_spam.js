@@ -16,7 +16,7 @@
 'use strict';
 
 const debug = require('debug')('wb:spam');
-const PouchDB = require('./pouchdb')
+const PouchDB = require('../pouchdb')
   .plugin(require('pouchdb-find'));
 
 debug('required');

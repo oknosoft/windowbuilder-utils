@@ -1,9 +1,9 @@
 /**
- * Обслуживание баз flowcon
+ * Добавляет ddoc _design/activity
  *
- * @module fl_compact
+ * @module fl_redesign
  *
- * Created by Evgeniy Malyarov on 04.07.2018.
+ * Created by Evgeniy Malyarov on 23.09.2018.
  */
 
 /**
@@ -11,7 +11,7 @@
  * DEBUG "wb:*,-not_this"
  * DBPWD admin
  * DBUSER admin
- * COUCHPATH http://cou221:5984/wb_
+ * COUCHPATH http://fl211:5984
  */
 
 'use strict';
@@ -19,14 +19,15 @@
 require('http').globalAgent.maxSockets = 35;
 
 const debug = require('debug')('wb:reindex');
-const PouchDB = require('./pouchdb').plugin({exec});
+const PouchDB = require('../pouchdb');
 const fs = require('fs');
+const activity = require('./activity');
 
 debug('required');
 
 // инициализируем параметры сеанса и метаданные
 const {DBUSER, DBPWD, COUCHPATH} = process.env;
-const prefix = 'fl_';
+const prefix = 'wb_';
 let index = 1;
 
 // получаем массив всех баз
@@ -44,7 +45,7 @@ function next(dbs) {
 
   index++;
   let name = dbs[index];
-  if(name && name.startsWith(prefix)) {
+  if(name && name[0] !== '_' && name.indexOf('_meta') === -1) {
     return reindex(name)
       .then(() => next(dbs));
   }
@@ -53,26 +54,8 @@ function next(dbs) {
   }
 }
 
-function exec(method, path, form) {
-
-  return new Promise((resolve, reject) => {
-    this._ajax({
-      url: `${this.name}/${path}`,
-      auth: {
-        username: DBUSER,
-        password: DBPWD
-      },
-      method,
-      form,
-    }, (err, obj, resp) => {
-      debug(`${this.name.replace(/^(.*\/)/, '')}/${path}: ${JSON.stringify(err || obj)}`);
-      setTimeout(resolve, 2000);
-    });
-  });
-}
-
 function reindex(name) {
-
+  // получаем базы
   const db = new PouchDB(`${COUCHPATH}/${name}`, {
     auth: {
       username: DBUSER,
@@ -81,8 +64,18 @@ function reindex(name) {
     skip_setup: true
   });
 
-  return db.exec('PUT', '_revs_limit', '3')
-    .then(() => db.exec('POST', '_compact', ''))
-    .then(() => db.exec('POST', '_view_cleanup', ''))
-    .then(() => db.close());
+  return db.get('_design/activity')
+    .catch((err) => {
+      if(err.status !== 404) {
+        return err;
+      }
+    })
+    .then((doc) => {
+      if(!doc) {
+        return db.put(activity)
+      }
+    })
+    .catch((err) => {
+      debug(`${name}: ${err.error}, ${err.reason}`);
+    });
 }

@@ -19,7 +19,7 @@
 require('http').globalAgent.maxSockets = 35;
 
 const debug = require('debug')('wb:reindex');
-const PouchDB = require('./pouchdb');
+const PouchDB = require('../pouchdb');
 const fs = require('fs');
 
 debug('required');
