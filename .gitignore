@@ -19,4 +19,4 @@ package-lock.json
 /templates/
 /ram/
 /wb_*
-wb_*
+wb_*/*
