@@ -87,12 +87,10 @@ const yargs = require('yargs')
         src.info()
           .then((info) => {
             debug(`connected to ${info.host}, doc count: ${info.doc_count}`);
-            return step(src, add, opt);
+            return security(src, name);
           })
-          .then(() => {
-            debug('all done');
-            //process.exit(0);
-          })
+          .then(() => step(src, add, opt))
+          .then(() => debug('all done'))
           .catch((err) => {
             debug(err);
             process.exit(1);
@@ -115,6 +113,20 @@ if(!argv._.length){
 
 let docs = 0;
 const mb = 1024 * 1024;
+
+function security(src, name) {
+  return src.get('_security')
+    .then((security) => new Promise((resolve, reject) => {
+      fs.writeFile(`${name}_security.json`, JSON.stringify(security), 'utf8', (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+          debug(`Записан ${name}_security.json`);
+        }
+      });
+    }));
+}
 
 function step(src, add, opt) {
   return src.allDocs(opt)
