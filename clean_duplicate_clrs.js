@@ -39,7 +39,7 @@ const ram = new PouchDB(`${COUCHPATH}${ZONE}_ram`, {
 const duplicates = [];
 const composite_clrs = new Map();
 const blank_guid = "00000000-0000-0000-0000-000000000000";
-let processed_docs = 0, changed_docs = 0;
+let processed_count = 0, changed_count = 0;
 
 return ram.info()
   .then((info) => {
@@ -57,10 +57,14 @@ return ram.info()
 function clean_duplicate_clrs(ram) {
   return ram.allDocs({
     include_docs: true,
-    startkey: 'cat.clrs|00',
-    endkey: 'cat.clrs|15',
+    //startkey: 'cat.clrs|00',
+    //endkey: 'cat.clrs|15',
+    keys : [
+      "cat.clrs|00", "cat.clrs|01", "cat.clrs|02", "cat.clrs|03", "cat.clrs|04", "cat.clrs|05", "cat.clrs|06", "cat.clrs|07",
+      "cat.clrs|08", "cat.clrs|09", "cat.clrs|10", "cat.clrs|11", "cat.clrs|12", "cat.clrs|13", "cat.clrs|14", "cat.clrs|15"
+    ]
   })
-    .then(async ({rows}) => {
+    .then(({rows}) => {
       if (rows.length) {
         const docs = rows.map(row => row.doc);
 
@@ -73,7 +77,7 @@ function clean_duplicate_clrs(ram) {
 
         return !dupls ? Promise.resolve() : (COUCHDBS || `${COUCHPATH}${ZONE}_doc`).split(',').reduce((prev, url) => {
           return prev.then(() => {
-            const doc = new PouchDB(url, {
+            const db = new PouchDB(url, {
               auth: {
                 username: DBUSER,
                 password: DBPWD
@@ -82,16 +86,16 @@ function clean_duplicate_clrs(ram) {
               ajax: {timeout: 100000}
             });
 
-            return doc.info()
+            return db.info()
               .then(info => {
                 console.log(`connected to ${info.host}, doc count: ${info.doc_count}`);
 
-                return replace_clrs(doc, {
+                return replace_clrs(db, {
                   include_docs: true,
                   attachments: true,
                   startkey: 'cat.characteristics|',
                   endkey: 'cat.characteristics|\ufff0',
-                  limit: 1000,
+                  limit: 2000,
                 });
               });
           });
@@ -118,7 +122,17 @@ function clean_clrs(db, docs) {
     }, []);
   });
 
-  return db.bulkDocs(docs);
+  function bulkDocs(db, docs) {
+    return db.bulkDocs(docs)
+      .catch(err => {
+        console.error(`error in clean_clrs: ${err && err.message}`);
+        console.log('trying again');
+
+        return bulkDocs(db, docs);
+      });
+  };
+
+  //return bulkDocs(db, docs);
 }
 
 function create_dict(docs) {
@@ -157,24 +171,29 @@ function replace_clrs(db, opt) {
   return db.allDocs(opt)
     .then(({rows}) => {
       if (rows.length) {
-        let docs = rows.map(row => row.doc);
-        processed_docs += docs.length;
+        const processed = rows.map(row => row.doc);
+        const changed = change_characteristics(processed);
 
-        docs = change_characteristics(docs);
-        changed_docs += docs.length;
-
-        console.log(`${processed_docs} characteristics processed, changed ${changed_docs}`);
-
-        // обновляем ключ для следующей выборки
-        opt.startkey = rows[rows.length - 1].key;
-        opt.skip = 1;
-
-        // меняем характеристики
-        return db.bulkDocs(docs)
+        // записываем характеристики
+        return db.bulkDocs(changed)
           .then(() => {
+            processed_count += processed.length;
+            changed_count += changed.length;
+            console.log(`${processed_count} characteristics processed, changed ${changed_count}`);
+
+            // обновляем ключ для следующей выборки
+            opt.startkey = rows[rows.length - 1].key;
+            opt.skip = 1;
+
             return replace_clrs(db, opt);
           });
       }
+    })
+    .catch(err => {
+      console.error(`error in replace_clrs: ${err && err.message}`);
+      console.log('trying again');
+
+      return replace_clrs(db, opt);
     });
 }
 
@@ -182,7 +201,7 @@ function change_characteristics(docs) {
   return docs.reduce((acc, doc) => {
     let changed = false;
     // цвет изделия
-    if (is_replace(doc.clr)) {
+    if (doc.hasOwnProperty('clr') && is_replace(doc.clr)) {
       doc.clr = duplicates[composite_clrs.get(doc.clr)].rows[0];
       changed = true;
     }
