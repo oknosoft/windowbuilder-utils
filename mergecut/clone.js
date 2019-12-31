@@ -7,12 +7,14 @@
  */
 
 const PouchDB = require('../pouchdb');
+const fs = require('fs');
 const {start} = require('./config');
 const {DBUSER, DBPWD} = process.env;
 const limit = 200;
 const timeout = 120000;
 const cnames = ['doc.calc_order', 'cat.characteristics'];
-let step = 0, dcount = 0, scount = 0;
+const progress = require('./progress.json');
+let step = 0;
 
 module.exports = function ({src, tgt}) {
 
@@ -69,7 +71,7 @@ function clone(src, tgt, name) {
     ajax: {timeout}
   });
 
-  return next_docs(src, tgt, '');
+  return next_docs(src, tgt, progress[src.name] || '');
 
 }
 
@@ -83,7 +85,19 @@ function next_docs(src, tgt, startkey) {
     limit,
   })
     .then(({rows}) => clone_docs(rows, tgt))
-    .then((rows) => rows.length === limit && next_docs(src, tgt, rows[rows.length-1].key));
+    .then(({rows, dcount}) => {
+
+      if(rows.length) {
+        progress[src.name] = rows[rows.length-1].key;
+        fs.writeFile(`progress.json`, JSON.stringify(progress), 'utf8', (err) => err && console.log(err));
+        step++;
+        console.log(`${tgt.name} step: ${step}, key: ${progress[src.name]}, dcount: ${dcount}`);
+      }
+
+      if(rows.length === limit) {
+        return next_docs(src, tgt, progress[src.name]);
+      }
+    });
 }
 
 function clone_docs(rows, tgt) {
@@ -107,11 +121,11 @@ function clone_docs(rows, tgt) {
           return tdoc.id === doc._id && tdoc.value.rev >= doc._rev;
         });
       });
-      step++;
-      scount += docs.length;
-      dcount += filtered.length;
-      console.log(`${tgt.name} step: ${step}, scount: ${scount}, dcount: ${dcount}`);
-      return filtered.length && tgt.bulkDocs(filtered, {new_edits: false});
+      return filtered.length ? tgt
+        .bulkDocs(filtered, {new_edits: false})
+        .then(() => filtered.length)
+        :
+        filtered.length;
     })
-    .then(() => sleep(100, rows));
+    .then((dcount) => sleep(100, {rows, dcount}));
 }
