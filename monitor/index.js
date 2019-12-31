@@ -31,9 +31,9 @@ const config = require('./config');
 const {DBUSER, DBPWD} = process.env;
 
 // массив серверов COUCHDB
-const servers = config.couchdbs.map((url) => ({url, errors: {}}));
+const servers = config.couchdbs.map(({url, ssh}) => ({url, ssh, errors: {}}));
 // подмешиваем сюда другие серверы
-servers.push({http: config.reports, ssh: config.reportsssh, errors: {}});
+servers.push({http: config.reports, ssh: config.reportsssh, service: 'supervisor', errors: {}});
 
 const checks = (() => {
   const res = [];

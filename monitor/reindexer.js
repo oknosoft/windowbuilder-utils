@@ -105,7 +105,7 @@ function revs_limit(name, count) {
 
 function rebuild_indexes(db) {
   let promises = Promise.resolve();
-  if(db.name.endsWith('_doc') && ign_root.some((port) => db.name.includes(port))) {
+  if(db.name.endsWith('_doc') && ign_root.some((ign) => db.name.includes(ign))) {
     return promises;
   }
   return db.allDocs({

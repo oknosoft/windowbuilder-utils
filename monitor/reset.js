@@ -11,10 +11,10 @@ const node_ssh = require('node-ssh');
 const {SSHUSER, SSHPWD} = process.env;
 const log_err = require('./log_err');
 
-module.exports = function reset({name, ssh}) {
+module.exports = function reset({ssh, service}) {
   const shell = new node_ssh();
-  const path = (ssh || new URL(name).host).split(':');
-  path[1] = path[1].length === 4 ? 22 : 30000 + parseInt(path[1], 10);
+  const path = ssh.split(':');
+  path[1] = parseInt(path[1], 10);
   return shell.connect({
     host: path[0],
     port: path[1],
@@ -22,7 +22,7 @@ module.exports = function reset({name, ssh}) {
     password: SSHPWD,
   })
     .then((shell) => {
-      return shell.execCommand(`service ${ssh ? 'supervisor' : 'couchdb'} restart`);
+      return shell.execCommand(`service ${service || 'couchdb'} restart`);
     })
     .then((res) => {
       return shell.dispose();
