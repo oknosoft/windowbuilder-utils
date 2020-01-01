@@ -17,7 +17,7 @@ const cnames = ['doc.calc_order', 'cat.characteristics'];
 const progress = require('./progress.json');
 let step = 0;
 
-module.exports = function ({src, tgt}) {
+module.exports = function ({src, tgt, suffix, all_docs}) {
 
   let index = 1;
 
@@ -26,7 +26,7 @@ module.exports = function ({src, tgt}) {
     index++;
     let name = dbs[index];
     if(name && name[0] !== '_') {
-      return clone(src, tgt, name)
+      return clone({src, tgt, name, suffix, all_docs})
         .then(() => next(dbs));
     }
     else if(name) {
@@ -54,7 +54,7 @@ function sleep(time, res) {
 }
 
 // выполняет обслуживание
-function clone(src, tgt, name) {
+function clone({src, tgt, name, suffix, all_docs}) {
   // получаем базы
   src = new PouchDB(`${src}/${name}`, {
     auth: {
@@ -64,7 +64,7 @@ function clone(src, tgt, name) {
     skip_setup: true,
     ajax: {timeout}
   });
-  tgt = new PouchDB(`${tgt}/${name}`, {
+  tgt = new PouchDB(`${tgt}/${name}${suffix ? '_' + suffix : ''}`, {
     auth: {
       username: DBUSER,
       password: DBPWD
@@ -84,12 +84,13 @@ function clone(src, tgt, name) {
     })
     .then((res) => res.json())
     .then((res) => {
-      return next_docs(src, tgt, progress[src.name] || '');
+      console.log(`${tgt.name} _security`);
+      return next_docs(src, tgt, progress[src.name] || '', all_docs);
     });
 
 }
 
-function next_docs(src, tgt, startkey) {
+function next_docs(src, tgt, startkey, all_docs) {
   return src.allDocs({
     include_docs: true,
     attachments: true,
@@ -98,7 +99,7 @@ function next_docs(src, tgt, startkey) {
     skip: startkey ? 1 : 0,
     limit,
   })
-    .then(({rows}) => clone_docs(rows, tgt))
+    .then(({rows}) => clone_docs(rows, tgt, all_docs))
     .then(({rows = [], dcount = 0}) => {
 
       if(rows.length) {
@@ -114,14 +115,14 @@ function next_docs(src, tgt, startkey) {
     });
 }
 
-function clone_docs(rows, tgt) {
+function clone_docs(rows, tgt, all_docs) {
   const docs = rows
     .map(({doc}) => doc)
     .filter((doc) => {
-      if(doc._id.startsWith('_') || !tgt.name.includes('_doc') || !cnames.includes(doc.class_name)) {
+      if(all_docs || doc._id.startsWith('_') || !tgt.name.includes('_doc') || !cnames.includes(doc.class_name)) {
         return true;
       }
-      return doc.timestamp && doc.timestamp.moment > start;
+      return (doc.timestamp && doc.timestamp.moment > start) || doc.obj_delivery_state === 'Шаблон';
     });
   if(!docs.length) {
     return rows;
