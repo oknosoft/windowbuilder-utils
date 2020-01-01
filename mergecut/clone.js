@@ -110,7 +110,7 @@ function next_docs(src, tgt, startkey, all_docs) {
       }
 
       if(rows.length === limit) {
-        return next_docs(src, tgt, progress[src.name]);
+        return next_docs(src, tgt, progress[src.name], all_docs);
       }
     });
 }
@@ -133,7 +133,7 @@ function clone_docs(rows, tgt, all_docs) {
     .then((res) => {
       const filtered = docs.filter((doc) => {
         return !res.rows.some((tdoc) => {
-          return tdoc.id === doc._id && tdoc.value.rev >= doc._rev;
+          return tdoc.id === doc._id && tdoc.value && tdoc.value.rev >= doc._rev;
         });
       });
       return filtered.length ? tgt

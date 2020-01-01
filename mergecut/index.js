@@ -21,9 +21,9 @@ const clone = require('./clone');
 let queue = Promise.resolve();
 
 for(const abonent in tasks) {
-  for(const {src, tgt} of tasks[abonent].clone) {
+  for(const {src, tgt, suffix, all_docs} of tasks[abonent].clone) {
     queue = queue
-      .then(() => clone({src, tgt}))
+      .then(() => clone({src, tgt, suffix, all_docs}))
       .catch((err) => {
         console.log(err);
       });
