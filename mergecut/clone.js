@@ -8,6 +8,7 @@
 
 const PouchDB = require('../pouchdb');
 const fs = require('fs');
+const fetch = require('node-fetch');
 const {start} = require('./config');
 const {DBUSER, DBPWD} = process.env;
 const limit = 200;
@@ -71,7 +72,20 @@ function clone(src, tgt, name) {
     ajax: {timeout}
   });
 
-  return next_docs(src, tgt, progress[src.name] || '');
+  return tgt.info()
+    .then(() => src.get('_security'))
+    .then((doc) => {
+      return fetch(`${tgt.name}/_security`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {Authorization: `Basic ${Buffer.from(DBUSER + ":" + DBPWD).toString('base64')}`},
+        body: JSON.stringify(doc),
+      })
+    })
+    .then((res) => res.json())
+    .then((res) => {
+      return next_docs(src, tgt, progress[src.name] || '');
+    });
 
 }
 
@@ -85,7 +99,7 @@ function next_docs(src, tgt, startkey) {
     limit,
   })
     .then(({rows}) => clone_docs(rows, tgt))
-    .then(({rows, dcount}) => {
+    .then(({rows = [], dcount = 0}) => {
 
       if(rows.length) {
         progress[src.name] = rows[rows.length-1].key;
