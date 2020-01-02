@@ -42,7 +42,7 @@ module.exports = {
       'https://c112.oknosoft.com',
     ]
   }],
-  reports: 'https://zakaz.ecookna.ru/r/img/doc.calc_order/eb23b5e6-62fc-4834-8dae-5e3cf24e97af?glasses',
+  reports: 'https://zakaz.ecookna.ru/r/img/doc.calc_order/6dbe34b0-2263-11ea-b4ce-f7cb551a00b9?glasses',
   reportsssh: 'dh5.oknosoft.ru:30191',
   compact_interval: 3,
 }

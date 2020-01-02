@@ -163,5 +163,5 @@ new CronJob('0 */2 * * * *', execute, null, true);
 log_err({start: 'monitor every 6 minute', log: true});
 new CronJob('0 */6 * * * *', monitor, null, true);
 log_err({start: 'reindex every day', log: true});
-new CronJob('0 0 1 * * *', reindex, null, true);
+new CronJob('0 0 2 * * *', reindex, null, true);
 
