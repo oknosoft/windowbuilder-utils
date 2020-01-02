@@ -17,7 +17,7 @@ const cnames = ['doc.calc_order', 'cat.characteristics'];
 const progress = require('./progress.json');
 let step = 0;
 
-module.exports = function ({src, tgt, suffix, all_docs}) {
+module.exports = function ({src, tgt, suffix, all_docs, exclude = []}) {
 
   let index = 1;
 
@@ -25,7 +25,7 @@ module.exports = function ({src, tgt, suffix, all_docs}) {
   function next(dbs) {
     index++;
     let name = dbs[index];
-    if(name && name[0] !== '_') {
+    if(name && name[0] !== '_' && !exclude.includes(name)) {
       return clone({src, tgt, name, suffix, all_docs})
         .then(() => next(dbs));
     }
@@ -72,6 +72,15 @@ function clone({src, tgt, name, suffix, all_docs}) {
     ajax: {timeout}
   });
 
+  return clone_security(src, tgt)
+    .then((res) => {
+      console.log(`${tgt.name} _security`);
+      return next_docs(src, tgt, progress[src.name] || '', all_docs);
+    });
+
+}
+
+function clone_security(src, tgt) {
   return tgt.info()
     .then(() => src.get('_security'))
     .then((doc) => {
@@ -83,12 +92,8 @@ function clone({src, tgt, name, suffix, all_docs}) {
       })
     })
     .then((res) => res.json())
-    .then((res) => {
-      console.log(`${tgt.name} _security`);
-      return next_docs(src, tgt, progress[src.name] || '', all_docs);
-    });
-
 }
+module.exports.clone_security = clone_security;
 
 function next_docs(src, tgt, startkey, all_docs) {
   return src.allDocs({

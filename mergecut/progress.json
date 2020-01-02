@@ -1,8 +1,1 @@
-{
-  "http://192.168.21.221:5984/wb_21_doc": "subscribers|1111",
-  "http://192.168.21.221:5984/wb_21_ram": "system|reset_cache",
-  "http://192.168.21.221:5984/wb_meta": "meta",
-  "http://192.168.21.208:5984/wb_8_doc": "ireg.margin_coefficients|14b807b9-ad79-11e9-8202-005056aafe4c¶7cff363b-bae4-11e9-8202-005056aafe4c¶00000000-0000-0000-0000-000000000000",
-  "http://192.168.21.208:5984/wb_8_doc_0018": "ireg.margin_coefficients|14b807b9-ad79-11e9-8202-005056aafe4c¶7cff363b-bae4-11e9-8202-005056aafe4c¶00000000-0000-0000-0000-000000000000",
-  "http://192.168.21.208:5984/wb_8_doc_0019": "cat.characteristics|ded2bde0-df58-11e9-9e6d-ed48f17b6493"
-}
+{"http://192.168.21.208:5984/wb_8_doc":"ireg.margin_coefficients|14b807b9-ad79-11e9-8202-005056aafe4c¶7cff363b-bae4-11e9-8202-005056aafe4c¶00000000-0000-0000-0000-000000000000","http://192.168.21.208:5984/wb_8_doc_0018":"ireg.margin_coefficients|14b807b9-ad79-11e9-8202-005056aafe4c¶7cff363b-bae4-11e9-8202-005056aafe4c¶00000000-0000-0000-0000-000000000000","http://192.168.21.208:5984/wb_8_doc_0019":"cat.characteristics|ded2bde0-df58-11e9-9e6d-ed48f17b6493","https://dh5.oknosoft.ru:221/wb_21_doc":"cat.characteristics|003a38a0-22fc-11ea-abc3-e5a9d4127312"}
