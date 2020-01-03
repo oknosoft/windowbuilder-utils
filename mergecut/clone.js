@@ -17,7 +17,7 @@ const cnames = ['doc.calc_order', 'cat.characteristics'];
 const progress = require('./progress.json');
 let step = 0;
 
-module.exports = function ({src, tgt, suffix, all_docs, exclude = []}) {
+module.exports = function ({src, tgt, suffix, all_docs, exclude = [], include = [], remove = []}) {
 
   let index = 1;
 
@@ -25,11 +25,14 @@ module.exports = function ({src, tgt, suffix, all_docs, exclude = []}) {
   function next(dbs) {
     index++;
     let name = dbs[index];
+    if(name && include.length && !include.includes(name)) {
+      return next(dbs);
+    }
     if(name && name[0] !== '_' && !exclude.includes(name)) {
-      return clone({src, tgt, name, suffix, all_docs})
+      return clone({src, tgt, name, suffix, all_docs, remove})
         .then(() => next(dbs));
     }
-    else if(name) {
+    if(name) {
       return next(dbs);
     }
   }
@@ -54,7 +57,7 @@ function sleep(time, res) {
 }
 
 // выполняет обслуживание
-function clone({src, tgt, name, suffix, all_docs}) {
+function clone({src, tgt, name, suffix, all_docs, remove}) {
   // получаем базы
   src = new PouchDB(`${src}/${name}`, {
     auth: {
@@ -73,9 +76,11 @@ function clone({src, tgt, name, suffix, all_docs}) {
   });
 
   return clone_security(src, tgt)
-    .then((res) => {
-      console.log(`${tgt.name} _security`);
-      return next_docs(src, tgt, progress[src.name] || '', all_docs);
+    .then(() => next_docs(src, tgt, progress[src.name] || '', all_docs))
+    .then(() => {
+      if(remove.includes(name)) {
+        return src.destroy();
+      }
     });
 
 }
@@ -91,7 +96,10 @@ function clone_security(src, tgt) {
         body: JSON.stringify(doc),
       })
     })
-    .then((res) => res.json())
+    .then((res) => {
+      console.log(`${tgt.name} _security`);
+      return res.json();
+    })
 }
 module.exports.clone_security = clone_security;
 
