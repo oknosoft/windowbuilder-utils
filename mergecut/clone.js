@@ -17,7 +17,7 @@ const cnames = ['doc.calc_order', 'cat.characteristics'];
 const progress = require('./progress.json');
 let step = 0;
 
-module.exports = function ({src, tgt, suffix, all_docs, exclude = [], include = [], remove = []}) {
+module.exports = function ({src, tgt, suffix, all_docs, all_dbs, local_docs, exclude = [], include = [], remove = []}) {
 
   let index = 1;
 
@@ -28,8 +28,8 @@ module.exports = function ({src, tgt, suffix, all_docs, exclude = [], include = 
     if(name && include.length && !include.includes(name)) {
       return next(dbs);
     }
-    if(name && name[0] !== '_' && !exclude.includes(name)) {
-      return clone({src, tgt, name, suffix, all_docs, remove})
+    if(name && (all_dbs || name[0] !== '_') && !exclude.includes(name)) {
+      return clone({src, tgt, name, suffix, all_docs, local_docs, remove})
         .then(() => next(dbs));
     }
     if(name) {
@@ -57,7 +57,7 @@ function sleep(time, res) {
 }
 
 // выполняет обслуживание
-function clone({src, tgt, name, suffix, all_docs, remove}) {
+function clone({src, tgt, name, suffix, all_docs, local_docs, remove}) {
   // получаем базы
   src = new PouchDB(`${src}/${name}`, {
     auth: {
@@ -72,10 +72,12 @@ function clone({src, tgt, name, suffix, all_docs, remove}) {
       username: DBUSER,
       password: DBPWD
     },
+    adapter: 'http',
     ajax: {timeout}
   });
 
   return clone_security(src, tgt)
+    .then(() => clone_local_docs(src, tgt, local_docs))
     .then(() => next_docs(src, tgt, progress[src.name] || '', all_docs))
     .then(() => {
       if(remove.includes(name)) {
@@ -85,7 +87,16 @@ function clone({src, tgt, name, suffix, all_docs, remove}) {
 
 }
 
+function is_system(db) {
+  const parts = db.name.split('/');
+  const dbname = parts[parts.length - 1];
+  return dbname.startsWith('_');
+}
+
 function clone_security(src, tgt) {
+  if(is_system(tgt)) {
+    return Promise.resolve();
+  }
   return tgt.info()
     .then(() => src.get('_security'))
     .then((doc) => {
@@ -128,10 +139,54 @@ function next_docs(src, tgt, startkey, all_docs) {
     });
 }
 
+function clone_local_docs(src, tgt, local_docs) {
+  if(!local_docs) {
+    return Promise.resolve();
+  }
+  return fetch(`${src.name}/_local_docs`, {
+    credentials: 'include',
+    headers: {
+      Authorization: `Basic ${Buffer.from(DBUSER + ":" + DBPWD).toString('base64')}`,
+      'Content-Type': 'application/json',
+    }
+  })
+    .then((res) => res.json())
+    .then(async ({rows}) => {
+      for(const row of rows) {
+        if(row.id.includes('log.') || row.id.includes('store.')) {
+          await clone_local_doc(src, tgt, row.id);
+        }
+      };
+    })
+}
+
+function clone_local_doc(src, tgt, _id) {
+  return src.get(_id)
+    .then((doc) => {
+      return tgt.get(_id)
+        .catch((err) => {
+          return tgt.put(doc);
+        })
+        .then((tdoc) => {
+          tdoc = null;
+        });
+    });
+  if(!local_docs) {
+    return Promise.resolve();
+  }
+}
+
 function clone_docs(rows, tgt, all_docs) {
+  const system_db = is_system(tgt);
   const docs = rows
     .map(({doc}) => doc)
     .filter((doc) => {
+      if(system_db && doc._id.startsWith('_')) {
+        return false;
+      }
+      if(typeof all_docs === 'function') {
+        return all_docs(doc);
+      }
       if(all_docs || doc._id.startsWith('_') || !tgt.name.includes('_doc') || !cnames.includes(doc.class_name)) {
         return true;
       }
