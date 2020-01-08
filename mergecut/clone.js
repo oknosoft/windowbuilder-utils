@@ -19,7 +19,7 @@ let step = 0;
 
 module.exports = function ({src, tgt, suffix, all_docs, all_dbs, local_docs, exclude = [], include = [], remove = []}) {
 
-  let index = 1;
+  let index = 0;
 
   // перебирает базы в асинхронном цикле
   function next(dbs) {
@@ -190,7 +190,7 @@ function clone_docs(rows, tgt, all_docs) {
       if(all_docs || doc._id.startsWith('_') || !tgt.name.includes('_doc') || !cnames.includes(doc.class_name)) {
         return true;
       }
-      return (doc.timestamp && doc.timestamp.moment > start) || doc.obj_delivery_state === 'Шаблон';
+      return !doc.timestamp || doc.timestamp.moment > start || doc.obj_delivery_state === 'Шаблон';
     });
   if(!docs.length) {
     return rows;
