@@ -17,7 +17,7 @@ const cnames = ['doc.calc_order', 'cat.characteristics'];
 const progress = require('./progress.json');
 let step = 0;
 
-module.exports = function ({src, tgt, suffix, all_docs, all_dbs, local_docs, exclude = [], include = [], remove = []}) {
+module.exports = function ({src, tgt, suffix, all_docs, all_dbs, local_docs, exclude = [], include = [], remove = [], skip_security}) {
 
   let index = 0;
 
@@ -29,7 +29,7 @@ module.exports = function ({src, tgt, suffix, all_docs, all_dbs, local_docs, exc
       return next(dbs);
     }
     if(name && (all_dbs || name[0] !== '_') && !exclude.includes(name)) {
-      return clone({src, tgt, name, suffix, all_docs, local_docs, remove})
+      return clone({src, tgt, name, suffix, all_docs, local_docs, remove, skip_security})
         .then(() => next(dbs));
     }
     if(name) {
@@ -57,7 +57,7 @@ function sleep(time, res) {
 }
 
 // выполняет обслуживание
-function clone({src, tgt, name, suffix, all_docs, local_docs, remove}) {
+function clone({src, tgt, name, suffix, all_docs, local_docs, remove, skip_security}) {
   // получаем базы
   src = new PouchDB(`${src}/${name}`, {
     auth: {
@@ -76,7 +76,7 @@ function clone({src, tgt, name, suffix, all_docs, local_docs, remove}) {
     ajax: {timeout}
   });
 
-  return clone_security(src, tgt)
+  return (skip_security ? Promise.resolve() : clone_security(src, tgt))
     .then(() => clone_local_docs(src, tgt, local_docs))
     .then(() => next_docs(src, tgt, progress[src.name] || '', all_docs))
     .then(() => {
@@ -152,11 +152,28 @@ function clone_local_docs(src, tgt, local_docs) {
   })
     .then((res) => res.json())
     .then(async ({rows}) => {
+
+      // for(const row of rows) {
+      //   if(row.id.startsWith('_local/bar')) {
+      //     await clone_local_doc(src, tgt, row.id);
+      //   }
+      // };
+
+      const keys = [];
       for(const row of rows) {
-        if(row.id.includes('log.') || row.id.includes('store.')) {
-          await clone_local_doc(src, tgt, row.id);
+        if(row.id.startsWith('_local/bar')) {
+          keys.push(row.id);
+        }
+        if(keys.length > 200) {
+          await src.allDocs({include_docs: true, keys})
+            .then(({rows}) => clone_docs(rows, tgt, true));
+          keys.length = 0;
         }
       };
+      if(keys.length) {
+        await src.allDocs({include_docs: true, keys})
+          .then(({rows}) => clone_docs(rows, tgt, true));
+      }
     })
 }
 
