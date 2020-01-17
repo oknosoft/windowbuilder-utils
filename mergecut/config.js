@@ -6,7 +6,7 @@
  */
 
 module.exports = {
-  start: '2019-09-30',
+  start: '2019-11-30',
   tasks: {
     // kaleva: {
     //   test: /_8_doc/,
@@ -40,6 +40,7 @@ module.exports = {
           // all_docs: true,
           // all_dbs: true,
           skip_security: true,
+          skip_docs: true,
           local_docs: true,
           exclude: [],
           include: ['wb_21_doc'],

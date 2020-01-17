@@ -17,7 +17,7 @@ const cnames = ['doc.calc_order', 'cat.characteristics'];
 const progress = require('./progress.json');
 let step = 0;
 
-module.exports = function ({src, tgt, suffix, all_docs, all_dbs, local_docs, exclude = [], include = [], remove = [], skip_security}) {
+module.exports = function ({src, tgt, suffix, all_docs, all_dbs, local_docs, exclude = [], include = [], remove = [], skip_security, skip_docs}) {
 
   let index = 0;
 
@@ -29,7 +29,7 @@ module.exports = function ({src, tgt, suffix, all_docs, all_dbs, local_docs, exc
       return next(dbs);
     }
     if(name && (all_dbs || name[0] !== '_') && !exclude.includes(name)) {
-      return clone({src, tgt, name, suffix, all_docs, local_docs, remove, skip_security})
+      return clone({src, tgt, name, suffix, all_docs, local_docs, remove, skip_security, skip_docs})
         .then(() => next(dbs));
     }
     if(name) {
@@ -57,7 +57,7 @@ function sleep(time, res) {
 }
 
 // выполняет обслуживание
-function clone({src, tgt, name, suffix, all_docs, local_docs, remove, skip_security}) {
+function clone({src, tgt, name, suffix, all_docs, local_docs, remove, skip_security, skip_docs}) {
   // получаем базы
   src = new PouchDB(`${src}/${name}`, {
     auth: {
@@ -78,7 +78,7 @@ function clone({src, tgt, name, suffix, all_docs, local_docs, remove, skip_secur
 
   return (skip_security ? Promise.resolve() : clone_security(src, tgt))
     .then(() => clone_local_docs(src, tgt, local_docs))
-    .then(() => next_docs(src, tgt, progress[src.name] || '', all_docs))
+    .then(() => !skip_docs && next_docs(src, tgt, progress[src.name] || '', all_docs))
     .then(() => {
       if(remove.includes(name)) {
         return src.destroy();
