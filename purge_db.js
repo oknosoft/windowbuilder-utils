@@ -1,7 +1,7 @@
 /**
- * ### Модуль поиска документов с конфликтами
+ * ### Модуль поиска и прочистки Удаленны документов
  *
- * @module  find_conflicts
+ * @module  purge_db
  *
  * Created 11.06.2020
  * поиск в _canges Базы удалённых документов
@@ -19,11 +19,11 @@
 
 'use strict';
 
-const debug = require('debug')('wb:find_conflicts');
+const debug = require('debug')('wb:purge_db');
 const PouchDB = require('pouchdb')
   .plugin(require('pouchdb-find'));
 
-const request = require('request')
+const request = require('request');
 
 
 debug('required');
@@ -77,58 +77,55 @@ var processed_docs = 0,
 var pageSize = 10;
 var lastSeq = 0;
 
-function fetchNextPage() {
 
-// Задейсствовать фильтр только для Удалённых
-// https://docs.couchdb.org/en/stable/api/database/changes.html
-// Что Ускорит прочистку
+
+
+function find_purge(item) {
+  // Есть проблеммы если документ был Удалён а после создан
+  // надо проверить есть ли он на самом деле
+  return db.get(item)
+    .catch(async (err) => {
+      let rs = {};
+      rs[item.id] = [item.changes[0].rev];
+      return await request.post(`${path}/_purge`, {
+        json: rs,
+        headers: {
+          "Authorization": auth
+        }
+      }, (error) => {
+        if (error) {
+          console.error(error);
+        }
+      });
+    });
+}
+
+function fetchNextPage() {
 
   return db.changes({
     since: lastSeq,
-    limit: pageSize
+    limit: pageSize,
+    selector: {
+      "_deleted": true
+    }
   }).then(function(changes) {
     if (changes.results.length < pageSize) {
-      // done! 
-    } else {
+      console.log(changes.last_seq);
       changes.results.forEach(async (item) => {
-        if (item.deleted) {
 
+        await find_purge(item);
 
-          console.log(item.id);
-// Есть проблеммы если документ был Удалён а после создан
-// надо проверить есть ли он на самом деле
-          await db.get(item.id)
-            .catch((err) => {
-
-              console.log(err);
-              //console.log(db);
-
-              let rs = {};
-              rs[item.id] = [item.changes[0].rev];
-              request.post(`${path}/_purge`, {
-                json: rs,
-                headers: {
-                  "Authorization": auth
-                }
-              }, (error, res, body) => {
-                if (error) {
-                  console.error(error);
-                  return;
-                }
-                console.log(`statusCode: ${res.statusCode}`);
-                console.log(body);
-              });
-
-
-            });
-
-
-        }
       });
 
+    } else {
+      changes.results.forEach(async (item) => {
+
+        //console.log(item);
+        await find_purge(item);
+
+      });
 
       lastSeq = changes.last_seq;
-
       return fetchNextPage();
     }
   });
