@@ -63,7 +63,7 @@ module.exports = function (url) {
     .then(next);
 };
 
-function sleep(time, res) {
+function sleep(time = 100, res) {
   return new Promise((resolve) => {
     setTimeout(() => resolve(res), time);
   });

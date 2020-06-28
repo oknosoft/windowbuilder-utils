@@ -6,7 +6,7 @@
  */
 
 module.exports = {
-  start: '2019-11-30',
+  start: '2020-03-01',
   tasks: {
     // kaleva: {
     //   test: /_8_doc/,
@@ -28,22 +28,21 @@ module.exports = {
     //     },
     //   ]
     // },
-    crystallit: {
-      test: /_21_doc/,
+    tmk: {
+      test: /_21_/,
       dbs: [],
       clone: [
         {
-          tgt: 'http://oknosoft.ecookna.ru:5984',
-          src: 'https://dh5.oknosoft.ru:221',
-          // tgt: 'http://cou221:5984',
-          suffix: '0100',
-          // all_docs: true,
-          // all_dbs: true,
-          skip_security: true,
+          src: 'http://192.168.21.221:5984',
+          tgt: 'http://192.168.21.5:5984',
+          //suffix: '0100',
+          //all_docs: true,
+          all_dbs: true,
+          // skip_security: true,
           skip_docs: true,
-          local_docs: true,
+          //local_docs: true,
           exclude: [],
-          include: ['wb_21_doc'],
+          include: [],
           remove: []
         },
       ],

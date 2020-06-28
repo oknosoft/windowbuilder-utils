@@ -6,7 +6,7 @@
  * Created by Evgeniy Malyarov on 31.12.2019.
  */
 
-const PouchDB = require('../pouchdb');
+const PouchDB = require('pouchdb');
 const fs = require('fs');
 const fetch = require('node-fetch');
 const {start} = require('./config');
@@ -19,7 +19,7 @@ let step = 0;
 
 module.exports = function ({src, tgt, suffix, all_docs, all_dbs, local_docs, exclude = [], include = [], remove = [], skip_security, skip_docs}) {
 
-  let index = 0;
+  let index = 1;
 
   // перебирает базы в асинхронном цикле
   function next(dbs) {
@@ -36,6 +36,8 @@ module.exports = function ({src, tgt, suffix, all_docs, all_dbs, local_docs, exc
       return next(dbs);
     }
   }
+
+  //return next(['','wb_23_doc']);
 
   // получаем массив всех баз
   return new PouchDB(`${src}/_all_dbs`, {
@@ -210,7 +212,7 @@ function clone_docs(rows, tgt, all_docs) {
       return !doc.timestamp || doc.timestamp.moment > start || doc.obj_delivery_state === 'Шаблон';
     });
   if(!docs.length) {
-    return rows;
+    return sleep(300, {rows});
   }
   // получаем ревизии документов, которые могут уже присутствовать в tgt и фильтруем
   return tgt
@@ -227,5 +229,5 @@ function clone_docs(rows, tgt, all_docs) {
         :
         filtered.length;
     })
-    .then((dcount) => sleep(100, {rows, dcount}));
+    .then((dcount) => sleep(300, {rows, dcount}));
 }

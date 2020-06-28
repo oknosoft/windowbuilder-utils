@@ -70,29 +70,35 @@ module.exports = function (servers) {
   const app = new Koa();
 
   app.use(async ctx => {
-    if(await isAuthorised(ctx, servers)) {
+    try {
+      if(await isAuthorised(ctx, servers)) {
 
-      // read 10 log lines:
-      const res = {
-        out: [],
-        err: []
-      };
+        // read 10 log lines:
+        const res = {
+          out: [],
+          err: []
+        };
 
-      for(const area of 'out,err'.split(',')) {
-        let counter = 1;
-        await lineReader.eachLine(`${path}${area}.log`, (line) => {
-          if(line && !line.startsWith('db.type()')) {
-            counter++;
-            res[area].push(line);
-            if(counter > limit) {
-              return false;
+        for(const area of 'out,err'.split(',')) {
+          let counter = 1;
+          await lineReader.eachLine(`${path}${area}.log`, (line) => {
+            if(line && !line.startsWith('db.type()')) {
+              counter++;
+              res[area].push(line);
+              if(counter > limit) {
+                return false;
+              }
             }
-          }
-        });
-      }
+          });
+        }
 
+        ctx.body = res;
+      }
+    }
+    catch (e) {
       ctx.body = res;
     }
+
   });
 
   app.listen(port);

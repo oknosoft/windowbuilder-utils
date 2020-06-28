@@ -12,6 +12,9 @@ const {SSHUSER, SSHPWD} = process.env;
 const log_err = require('./log_err');
 
 module.exports = function reset({ssh, service}) {
+  if(!ssh) {
+    return;
+  }
   const shell = new node_ssh();
   const path = ssh.split(':');
   path[1] = parseInt(path[1], 10);
