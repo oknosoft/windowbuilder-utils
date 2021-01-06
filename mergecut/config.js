@@ -6,7 +6,7 @@
  */
 
 module.exports = {
-  start: '2020-03-01',
+  start: '2020-10-01',
   tasks: {
     // kaleva: {
     //   test: /_8_doc/,
@@ -28,24 +28,26 @@ module.exports = {
     //     },
     //   ]
     // },
-    tmk: {
-      test: /_21_/,
-      dbs: [],
-      clone: [
-        {
-          src: 'http://192.168.21.221:5984',
-          tgt: 'http://192.168.21.5:5984',
-          //suffix: '0100',
-          //all_docs: true,
-          all_dbs: true,
-          // skip_security: true,
-          skip_docs: true,
-          //local_docs: true,
-          exclude: [],
-          include: [],
-          remove: []
-        },
-      ],
+    tasks: {
+      krasal: {
+        test: /_21_doc/,
+        dbs: [],
+        clone: [
+          {
+            src: 'http://192.168.21.211:5984',
+            tgt: 'http://localhost:5984',
+            //suffix: '0100',
+            all_docs: false,
+            all_dbs: true,
+            //skip_security: true,
+            //skip_docs: true,
+            local_docs: false,
+            exclude: [],
+            include: [],
+            remove: []
+          },
+        ],
+      }
     }
   }
 }

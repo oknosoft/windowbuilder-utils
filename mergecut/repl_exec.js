@@ -15,7 +15,7 @@
  */
 
 const {tasks} = require('./config');
-const PouchDB = require('../pouchdb');
+const PouchDB = require('pouchdb');
 const {clone_security} = require('./clone');
 const {DBUSER, DBPWD} = process.env;
 
