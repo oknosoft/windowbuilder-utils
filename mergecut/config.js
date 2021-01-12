@@ -28,26 +28,24 @@ module.exports = {
     //     },
     //   ]
     // },
-    tasks: {
-      krasal: {
-        test: /_21_doc/,
-        dbs: [],
-        clone: [
-          {
-            src: 'http://192.168.21.211:5984',
-            tgt: 'http://localhost:5984',
-            //suffix: '0100',
-            all_docs: false,
-            all_dbs: true,
-            //skip_security: true,
-            //skip_docs: true,
-            local_docs: false,
-            exclude: [],
-            include: [],
-            remove: []
-          },
-        ],
-      }
+    krasal: {
+      test: /^wb_21_doc_/,
+      dbs: [],
+      clone: [
+        {
+          src: 'http://192.168.9.221:5984',
+          tgt: 'http://localhost:5984',
+          //suffix: '0100',
+          all_docs: false,
+          all_dbs: true,
+          //skip_security: true,
+          //skip_docs: true,
+          local_docs: false,
+          exclude: [],
+          include: [],
+          remove: []
+        },
+      ],
     }
   }
 }
