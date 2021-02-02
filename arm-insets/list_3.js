@@ -15,6 +15,19 @@ const arms = '3e6a62e8-3c40-11e9-81fe-005056aafe4c,2529438c-3c40-11e9-81fe-00505
   .split(',');
 //.map((ref) => `cat.production_params|${ref}`);
 
+function check(doc) {
+  if(doc.specification.some((row) => {
+    if(arms.includes(row.nom)) {
+      const crow = doc.coordinates.find(({elm}) => elm === row.elm);
+      if(crow && crow.elm_type !== 'Импост') {
+        return true;
+      }
+    }
+  })) {
+    return true;
+  }
+}
+
 module.exports = function list_3() {
   const db_doc = new PouchDB(`https://dh5.oknosoft.ru:221/wb_21_doc/`, {
     auth: {
@@ -34,10 +47,7 @@ module.exports = function list_3() {
         else {
           const tmp = await db_doc.allDocs({include_docs: true, keys});
           for(const {doc} of tmp.rows) {
-            if(doc && doc.specification) {
-              if(doc.specification.some((row) => arms.includes(row.nom))) {
-                continue;
-              }
+            if(doc && doc.specification && !check(doc)) {
               res.add(doc);
             }
           }
@@ -46,10 +56,7 @@ module.exports = function list_3() {
       };
       const tmp = await db_doc.allDocs({include_docs: true, keys});
       for(const {doc} of tmp.rows) {
-        if(doc && doc.specification) {
-          if(doc.specification.some((row) => arms.includes(row.nom))) {
-            continue;
-          }
+        if(doc && doc.specification && !check(doc)) {
           res.add(doc);
         }
       }
@@ -66,7 +73,7 @@ module.exports = function list_3() {
         };
         detales.push(tmp);
         for(const row of doc.coordinates) {
-          if('Рама,Створка,Импост'.includes(row.elm_type)) {
+          if('Рама,Створка'.includes(row.elm_type)) {
             length += row.len;
             tmp.length += row.len;
           }
