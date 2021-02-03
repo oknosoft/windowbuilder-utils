@@ -66,10 +66,13 @@ module.exports = function list_4() {
         }
       }
       let length = 0;
+      let count = 0;
       for(const elm of list_3.detales) {
+        count += elm.quantity;
         length += elm.length * elm.quantity;
       }
       list_3.length = length;
+      list_3.count = count;
       fs.writeFile(`list_4.json`, JSON.stringify(list_3), 'utf8', (err) => err && console.log(err));
     })
 };
