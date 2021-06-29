@@ -1,7 +1,7 @@
 /**
- * ### Ошибочные свойства построителя
+ * ### Хвосты характеристик
  *
- * @module  clear_builder_props
+ * @module  clear_templates
  *
  */
 
@@ -10,7 +10,7 @@
  * DEBUG "wb:*,-not_this"
  * DBPWD admin
  * DBUSER admin
- * COUCHPATH http://oknosoft.ecookna.ru:5984/pl_events
+ * COUCHPATH https://dh5.oknosoft.ru:210/wb_
  */
 
 'use strict';
@@ -29,7 +29,7 @@ const src = new PouchDB(COUCHPATH, {
   ajax: {timeout: 100000}
 });
 
-const limit = 60;
+const limit = 200;
 
 src.info()
   .then((info) => {
@@ -55,19 +55,35 @@ function clear_bp(bookmark) {
   return src.find({
     selector: {
       class_name: 'cat.characteristics',
-      builder_props: {$regex: '{"0":'}
+      obj_delivery_state: 'Шаблон',
     },
+    fields: ['_id', '_rev', 'name', 'calc_order'],
     limit,
     bookmark,
   })
     .then(({docs, bookmark}) => {
       if(docs.length) {
         debug(`received ${docs.length} rows`);
-        return src.bulkDocs(docs.map((row) => {
-          delete row.builder_props;
-          return row;
-        }))
-          .then(() => sleep(5000, 0))
+        // ищем заказы
+        const keys = docs.map((row) => `doc.calc_order|${row.calc_order}`);
+        return src.allDocs({keys})
+          .then(({rows}) => {
+            const set = new Set();
+            for(const {key, error} of rows) {
+              if(error === 'not_found') {
+                set.add(key.substr(15));
+              }
+            }
+            const del = [];
+            docs.forEach((doc) => {
+              if(set.has(doc.calc_order)) {
+                doc._deleted = true;
+                del.push(doc);
+              }
+            });
+            return src.bulkDocs(del);
+          })
+          .then(() => sleep(3000, 0))
           .then(() => clear_bp(bookmark));
       }
     })
