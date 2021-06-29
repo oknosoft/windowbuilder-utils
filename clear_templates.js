@@ -29,7 +29,7 @@ const src = new PouchDB(COUCHPATH, {
   ajax: {timeout: 100000}
 });
 
-const limit = 200;
+const limit = 400;
 
 src.info()
   .then((info) => {
@@ -81,9 +81,10 @@ function clear_bp(bookmark) {
                 del.push(doc);
               }
             });
+            debug(`remove ${del.length} rows`);
             return src.bulkDocs(del);
           })
-          .then(() => sleep(3000, 0))
+          .then(() => sleep(2000, 0))
           .then(() => clear_bp(bookmark));
       }
     })
