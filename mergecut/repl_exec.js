@@ -56,22 +56,34 @@ function replicate({src, tgt,  exclude = []}) {
               username: DBUSER,
               password: DBPWD
             },
-            skip_setup: true,
           });
           res.push(
             await tdb.info()
-              .then(() => tdb.destroy())
-              .catch(() => null)
+              //.then(() => tdb.destroy())
+              //.catch(() => null)
               .then(() => {
-                const tdb = new PouchDB(`${tgt}/${name}`, {
-                  auth: {
-                    username: DBUSER,
-                    password: DBPWD
-                  },
-                });
+                // const tdb = new PouchDB(`${tgt}/${name}`, {
+                //   auth: {
+                //     username: DBUSER,
+                //     password: DBPWD
+                //   },
+                // });
                 return clone_security(sdb, tdb)
-                  .then(() => tdb.replicate.from(sdb))
-                  .then(() => sdb.destroy());
+                  .then(() => tdb.replicate.from(sdb, {
+                    selector: {
+                      $or: [
+                        {
+                          class_name: {$in: ['cat.characteristics', 'doc.calc_order']},
+                          'timestamp.moment': {$gt: '2021-10-10'},
+                          obj_delivery_state: {$ne: 'Шаблон'}
+                        },
+                        {
+                          _id: {$regex: '_design/'}
+                        }
+                      ]
+                    }
+                  }))
+                  //.then(() => sdb.destroy());
               })
           );
         }
