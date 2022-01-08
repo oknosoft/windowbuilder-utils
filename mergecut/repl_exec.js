@@ -83,7 +83,10 @@ function replicate({src, tgt,  exclude = []}) {
                       ]
                     }
                   }))
-                  //.then(() => sdb.destroy());
+                  .then((res) => {
+                    console.log(JSON.stringify(res));
+                    //sdb.destroy()
+                  });
               })
           );
         }
