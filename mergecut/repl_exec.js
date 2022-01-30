@@ -74,7 +74,7 @@ function replicate({src, tgt,  exclude = []}) {
                       $or: [
                         {
                           class_name: {$in: ['cat.characteristics', 'doc.calc_order']},
-                          'timestamp.moment': {$gt: '2021-10-10'},
+                          'timestamp.moment': {$gt: '2021-11-01'},
                           obj_delivery_state: {$ne: 'Шаблон'}
                         },
                         {
