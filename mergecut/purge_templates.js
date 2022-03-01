@@ -21,7 +21,7 @@ const templates = {
 
   // база, из которой читаем цвета
   //https://dh5.oknosoft.ru:221/wb_21_doc https://dh5.oknosoft.ru:1110/wb_11_ram https://dh5.oknosoft.ru:207/wb_8_doc_0019
-  db: new PouchDB(`https://dh5.oknosoft.ru:207/wb_8_doc`, {
+  db: new PouchDB(`https://dh5.oknosoft.ru:1110/wb_10_doc`, {
     auth: {
       username: DBUSER,
       password: DBPWD
@@ -36,7 +36,7 @@ const templates = {
       selector: {
         class_name: 'doc.calc_order',
         obj_delivery_state: 'Шаблон',
-        note: {$regex: 'Удаляем!'},
+        note: {$regex: '!Удаляем'},
         //limit: 1000,
       }
     })
