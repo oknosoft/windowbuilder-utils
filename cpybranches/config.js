@@ -10,5 +10,5 @@ module.exports = {
     return server.http; //'http://cou221:5984/wb_';
   },
   // если указать {purge: true}, база-приёмник будет очищаться перед репликацией
-  purge: true,
+  purge: false,
 };
