@@ -22,6 +22,99 @@ const dbs = {
   })
 };
 
+const presave = [
+  {
+    "ref": "a109724a-10b7-44ea-b57a-e32d45765490"
+  },
+  {
+    "ref": "934fca04-289e-11e9-81fe-005056aafe4c"
+  },
+  {
+    "ref": "536afd80-5ae6-11ea-85a8-358e2e144ccd"
+  },
+  {
+    "ref": "9ceb898b-6cd8-4702-a258-472f39b39872"
+  },
+  {
+    "ref": "535fb2e0-5ae6-11ea-85a8-358e2e144ccd"
+  },
+  {
+    "ref": "a67b3da7-289e-11e9-81fe-005056aafe4c"
+  },
+  {
+    "ref": "6b2f64ee-ddc0-4d60-d599-d54831782a0e"
+  },
+  {
+    "ref": "6a749068-faf9-11df-845b-00215ad499af"
+  },
+  {
+    "ref": "57019a9c-fafd-11df-845b-00215ad499af"
+  },
+  {
+    "ref": "6a74906b-faf9-11df-845b-00215ad499af"
+  },
+  {
+    "ref": "4d7241af-ee7a-11e4-811a-00155d001434"
+  },
+  {
+    "ref": "6a749074-faf9-11df-845b-00215ad499af"
+  },
+  {
+    "ref": "f9f2bffb-f39c-11e3-a3d4-00215ad499af"
+  },
+  {
+    "ref": "36b0303d-fb01-11df-845b-00215ad499af"
+  },
+  {
+    "ref": "57019a94-fafd-11df-845b-00215ad499af"
+  },
+  {
+    "ref": "6a74905d-faf9-11df-845b-00215ad499af"
+  },
+  {
+    "ref": "bcffeeb9-1c9f-11e5-811d-00155d001434"
+  },
+  {
+    "ref": "57019aab-fafd-11df-845b-00215ad499af"
+  },
+  {
+    "ref": "6a749050-faf9-11df-845b-00215ad499af"
+  },
+  {
+    "ref": "57019a82-fafd-11df-845b-00215ad499af"
+  },
+  {
+    "ref": "6a749069-faf9-11df-845b-00215ad499af"
+  },
+  {
+    "ref": "57019a77-fafd-11df-845b-00215ad499af"
+  },
+  {
+    "ref": "c35a47f1-f0f4-11e1-ae6b-00215ad499af"
+  },
+  {
+    "ref": "b87f7766-c0be-49cb-b466-d612777b1951"
+  },
+  {
+    "ref": "7c6906b1-310c-11e9-81fe-005056aafe4c"
+  },
+  {
+    "ref": "7a383120-50bf-11ea-ae53-3138964a5c0d"
+  },
+  {
+    "ref": "7a262fc0-50bf-11ea-ae53-3138964a5c0d"
+  },
+  {
+    "ref": "0b5b7cd0-6375-11ea-ba4c-8de712bf8bcb"
+  },
+  {
+    "ref": "cf9ece7d-7b12-11e9-8202-005056aafe4c"
+  },
+  {
+    "ref": "c56759c0-909e-11ec-8072-bf415e538b8f"
+  },
+];
+
 const cat = {
   branches: [],
   abonents: [],
@@ -217,7 +310,10 @@ const cat = {
   move() {
     const clrs = [];
     for(const clr of this.clrs) {
-      if(this.composite.has(clr.ref)) {
+      // if(this.composite.has(clr.ref)) {
+      //   continue;
+      // }
+      if(clr._deleted || !presave.find(({ref}) => ref === clr.ref)) {
         continue;
       }
       clr._id = `cat.clrs|${clr.ref}`;
@@ -230,53 +326,50 @@ const cat = {
       clrs.push(clr);
     }
     console.log(clrs.length);
-    dbs.ram.allDocs({keys: clrs.map((clr) => clr._id)})
-      .then(({rows}) => {
-        for (const {key, value} of rows) {
-          const clr = clrs.find((v) => v._id === key);
-          if(clr) {
-            clrs.splice(clrs.indexOf(clr), 1);
-          }
-        }
-        for (const clr of clrs) {
-          delete clr.ref;
-          delete clr.clr_in;
-          delete clr.clr_out;
-          delete clr.timestamp;
-          clr.class_name = 'cat.clrs';
-          clr._rev = rows.find((v) => v.key === clr._id).value.rev;
-        }
-        // [
-        //   {
-        //     "id": "cat.clrs|0b5b7cd0-6375-11ea-ba4c-8de712bf8bcb",
-        //     "error": "conflict",
-        //     "reason": "Document update conflict.",
-        //     "name": "conflict",
-        //     "status": 409,
-        //     "message": "Document update conflict."
-        //   },
-        //   {
-        //     "id": "cat.clrs|cf9ece7d-7b12-11e9-8202-005056aafe4c",
-        //     "error": "conflict",
-        //     "reason": "Document update conflict.",
-        //     "name": "conflict",
-        //     "status": 409,
-        //     "message": "Document update conflict."
-        //   },
-        //   {
-        //     "id": "cat.clrs|c56759c0-909e-11ec-8072-bf415e538b8f",
-        //     "error": "conflict",
-        //     "reason": "Document update conflict.",
-        //     "name": "conflict",
-        //     "status": 409,
-        //     "message": "Document update conflict."
-        //   }
-        // ]
-        //return dbs.ram.bulkDocs(clrs);
-      })
+
+    for (const clr of clrs) {
+      delete clr.ref;
+      if(clr.clr_out === clr) {
+        delete clr.clr_out;
+      }
+      if(clr.clr_in === clr) {
+        delete clr.clr_in;
+      }
+      if(clr?.clr_in?.ref) {
+        clr.clr_in = clr.clr_in.ref;
+      }
+      if(clr?.clr_out?.ref) {
+        clr.clr_out = clr.clr_out.ref;
+      }
+      delete clr.timestamp;
+      clr.class_name = 'cat.clrs';
+    }
+    return dbs.ram.bulkDocs(clrs)
       .then((res) => {
         console.log(res);
       });
+
+    // dbs.ram.allDocs({keys: clrs.map((clr) => clr._id)})
+    //   .then(({rows}) => {
+    //     for (const {key, value} of rows) {
+    //       const clr = clrs.find((v) => v._id === key);
+    //       if(clr) {
+    //         clrs.splice(clrs.indexOf(clr), 1);
+    //       }
+    //     }
+    //     for (const clr of clrs) {
+    //       delete clr.ref;
+    //       delete clr.clr_in;
+    //       delete clr.clr_out;
+    //       delete clr.timestamp;
+    //       clr.class_name = 'cat.clrs';
+    //       clr._rev = rows.find((v) => v.key === clr._id).value.rev;
+    //     }
+    //     //return dbs.ram.bulkDocs(clrs);
+    //   })
+    //   .then((res) => {
+    //     console.log(res);
+    //   });
   },
   main() {
     console.log('dbs created');
