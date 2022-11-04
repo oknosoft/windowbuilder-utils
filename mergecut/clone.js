@@ -11,7 +11,7 @@ const fs = require('fs');
 const fetch = require('node-fetch');
 const {start} = require('./config');
 const {DBUSER, DBPWD} = process.env;
-const limit = 200;
+const limit = 100;
 const timeout = 120000;
 const cnames = ['doc.calc_order', 'cat.characteristics'];
 const progress = require('./progress.json');
@@ -56,10 +56,22 @@ function sleep(time, res) {
   });
 }
 
-// выполняет обслуживание
+/**
+ * выполняет обслуживание
+ * @param {String} src - http-путь сервера-источника или полный путь базы-источника
+ * @param {String} tgt - http-путь сервера-приемника или полный путь базы-приёмника
+ * @param {String} name - имя базы источника
+ * @param {String} suffix - суффикс приёмника
+ * @param {Boolean|Function} all_docs - признак, копировать все документы или фильтр-функция
+ * @param {Boolean} local_docs - копировать local_docs
+ * @param {Array.<String>} remove - массив имён баз к удалению после клонирования
+ * @param {Boolean} skip_security - не копировать права
+ * @param {Boolean} skip_docs - признак пропустить копирование документов
+ * @return {Promise<void>}
+ */
 function clone({src, tgt, name, suffix, all_docs, local_docs, remove, skip_security, skip_docs}) {
   // получаем базы
-  src = new PouchDB(`${src}/${name}`, {
+  src = new PouchDB(`${src}${name ? '/' + name : ''}`, {
     auth: {
       username: DBUSER,
       password: DBPWD
@@ -67,7 +79,7 @@ function clone({src, tgt, name, suffix, all_docs, local_docs, remove, skip_secur
     skip_setup: true,
     ajax: {timeout}
   });
-  tgt = new PouchDB(`${tgt}/${name}${suffix ? '_' + suffix : ''}`, {
+  tgt = new PouchDB(`${tgt}${name ? '/' + name : ''}${suffix ? '_' + suffix : ''}`, {
     auth: {
       username: DBUSER,
       password: DBPWD
@@ -84,8 +96,8 @@ function clone({src, tgt, name, suffix, all_docs, local_docs, remove, skip_secur
         return src.destroy();
       }
     });
-
 }
+module.exports.clone = clone;
 
 function is_system(db) {
   const parts = db.name.split('/');
