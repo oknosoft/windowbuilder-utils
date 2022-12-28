@@ -140,7 +140,7 @@ function next_docs(src, tgt, startkey, all_docs) {
 
       if(rows.length) {
         progress[src.name] = rows[rows.length-1].key;
-        fs.writeFile(`progress.json`, JSON.stringify(progress), 'utf8', (err) => err && console.log(err));
+        fs.writeFile(require.resolve('./progress.json'), JSON.stringify(progress), 'utf8', (err) => err && console.log(err));
         step++;
         console.log(`${tgt.name} step: ${step}, key: ${progress[src.name]}, dcount: ${dcount}`);
       }
