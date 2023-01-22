@@ -55,6 +55,7 @@ function sleep(time, res) {
     setTimeout(() => resolve(res), time);
   });
 }
+module.exports.sleep = sleep;
 
 /**
  * выполняет обслуживание

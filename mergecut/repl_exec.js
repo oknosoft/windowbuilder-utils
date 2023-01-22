@@ -14,24 +14,25 @@
  * DBUSER admin
  */
 
-const {tasks} = require('./config');
+const {tasks, start} = require('./config');
 const PouchDB = require('pouchdb');
-const {clone_security} = require('./clone');
+const {clone_security, sleep} = require('./clone');
 const {DBUSER, DBPWD} = process.env;
 
 let queue = Promise.resolve();
 
 for(const abonent in tasks) {
-  for(const {src, tgt, exclude} of tasks[abonent].clone) {
+  const {clone, ...other} = tasks[abonent];
+  for(const {src, tgt} of clone) {
     queue = queue
-      .then(() => replicate({src, tgt, exclude}))
+      .then(() => replicate({src, tgt, ...other}))
       .catch((err) => {
-        console.log(err);
+        console.error(err);
       });
   }
 }
 
-function replicate({src, tgt,  exclude = []}) {
+function replicate({src, tgt, exclude  = [], test, clear = {}}) {
   // получаем массив всех баз
   return new PouchDB(`${src}/_all_dbs`, {
     auth: {
@@ -43,7 +44,7 @@ function replicate({src, tgt,  exclude = []}) {
     .then(async (dbs) => {
       const res = [];
       for(const name of dbs) {
-        if(name && name[0] !== '_' && !exclude.includes(name)) {
+        if(name && name[0] !== '_' && !exclude.includes(name) && (!test || test.test(name))) {
           const sdb = new PouchDB(`${src}/${name}`, {
             auth: {
               username: DBUSER,
@@ -51,7 +52,7 @@ function replicate({src, tgt,  exclude = []}) {
             },
             skip_setup: true,
           });
-          const tdb = new PouchDB(`${tgt}/${name}`, {
+          let tdb = new PouchDB(`${tgt}/${name}`, {
             auth: {
               username: DBUSER,
               password: DBPWD
@@ -59,22 +60,25 @@ function replicate({src, tgt,  exclude = []}) {
           });
           res.push(
             await tdb.info()
-              //.then(() => tdb.destroy())
-              //.catch(() => null)
               .then(() => {
-                // const tdb = new PouchDB(`${tgt}/${name}`, {
-                //   auth: {
-                //     username: DBUSER,
-                //     password: DBPWD
-                //   },
-                // });
+                return clear.tgt ? tdb.destroy().catch(() => null) : null;
+              })
+              .then(() => {
+                if(clear.tgt) {
+                  tdb = new PouchDB(`${tgt}/${name}`, {
+                    auth: {
+                      username: DBUSER,
+                      password: DBPWD
+                    },
+                  });
+                }
                 return clone_security(sdb, tdb)
                   .then(() => tdb.replicate.from(sdb, {
                     selector: {
                       $or: [
                         {
                           class_name: {$in: ['cat.characteristics', 'doc.calc_order']},
-                          'timestamp.moment': {$gt: '2021-11-01'},
+                          'timestamp.moment': {$gt: start},
                           obj_delivery_state: {$ne: 'Шаблон'}
                         },
                         {
@@ -83,10 +87,11 @@ function replicate({src, tgt,  exclude = []}) {
                       ]
                     }
                   }))
-                  .then((res) => {
-                    console.log(JSON.stringify(res));
-                    //sdb.destroy()
-                  });
+                  .catch(err => err);
+              })
+              .then((res) => {
+                res instanceof Error ? console.error(res) : console.log(JSON.stringify(res));
+                return sleep(200, clear.src ? sdb.destroy() : null);
               })
           );
         }
