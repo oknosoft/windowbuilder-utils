@@ -19,7 +19,7 @@ module.exports = {
       clone: [
         {
           src: 'https://dh5.oknosoft.ru:222',
-          tgt: 'http://start-l.phototech.ru:5984',
+          tgt: 'http://localhost:5984',
         },
       ],
     },
@@ -33,7 +33,7 @@ module.exports = {
       // эти серверы будут клонированы с обрезанием, массив может быть пустым
       clone: [
         {
-          src: 'http://start-l.phototech.ru:5984',
+          src: 'http://localhost:5984',
           tgt: 'https://dh5.oknosoft.ru:222',
         },
       ],
