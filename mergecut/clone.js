@@ -50,7 +50,7 @@ module.exports = function ({src, tgt, suffix, all_docs, all_dbs, local_docs, exc
 
 };
 
-function sleep(time, res) {
+function sleep(time=100, res) {
   return new Promise((resolve) => {
     setTimeout(() => resolve(res), time);
   });
