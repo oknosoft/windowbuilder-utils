@@ -33,7 +33,7 @@ function lock({src}) {
     }).info()
         .then(async (dbs) => {
             for(const name of dbs) {
-                if(name && name.includes('otk_2_doc_')) {
+                if(name && name.includes('_doc_')) {
                     const sdb = new PouchDB(`${src}/${name}`, {
                         auth: {
                             username: DBUSER,
