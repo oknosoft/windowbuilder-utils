@@ -7,8 +7,8 @@
  */
 
 const PouchDB = require('pouchdb').plugin(require('pouchdb-find'));
-const fs = require('fs');
-const {DBUSER, DBPWD} = process.env;
+const fs = require('node:fs/promises');
+const {DBUSER, DBPWD, RUSER, RPWD} = process.env;
 
 // http://192.168.21.110:5984/wb_10_ram
 // http://192.168.21.21:5984/wb_21_ram
@@ -20,10 +20,10 @@ const source = new PouchDB(`https://dh5.oknosoft.ru:1110/wb_10_ram`, {
   },
   skip_setup: true,
 });
-const targer = new PouchDB(`https://dh5.oknosoft.ru:207/wb_8_ram`, {
+const target = new PouchDB(`http://cou221:5984/wb_22_ram`, {
   auth: {
-    username: DBUSER,
-    password: DBPWD
+    username: RUSER,
+    password: RPWD
   },
   skip_setup: true,
 });
@@ -38,9 +38,9 @@ const limit = 100;
 const problems = require('./mdm_problems.json');
 
 // обработчик документа
-function handle(_id) {
+function handle(_id, _rev) {
   // если объекта нет в базе приёмника
-  return targer.get(_id)
+  return target.get(_id)
     .catch(({status}) => {
       if(status !== 404) {
         return;
@@ -76,20 +76,29 @@ function handle(_id) {
               doc = await reserve.get(_id);
             }
             catch (err) {
-              console.error(err);
+              if(err.status !== 404) {
+                console.error(err);
+              }
             }
           }
           if(doc) {
-            return targer.bulkDocs([doc], {new_edits: false})
-              .catch((err) => {
-                console.error(err);
-              });
+            try {
+              await target.bulkDocs([doc], {new_edits: false});
+              return;
+            }
+            catch (err) {
+              if(problem) {
+                problem.err = err.message;
+              }
+              console.error(err);
+            }
           }
           if(problem && !problems.find((_id) => _id === problem._id)) {
             problems.push({
-              _id: problem._id,
-              id: problem.id,
+              _id,
+              _rev,
               name: problem.name,
+              err: problem.err,
               user: problem.timestamp?.user,
             });
           }
@@ -99,14 +108,14 @@ function handle(_id) {
 
 function replicate(bookmark) {
   return source.find({
-    selector: {captured: true},
+    selector: {captured: {$ne: false}},
     limit,
     bookmark,
   })
     .then(async (res) => {
       bookmark = res.bookmark;
       for (const doc of res.docs) {
-        await handle(doc._id);
+        await handle(doc._id, doc._rev);
       }
       //await db.bulkDocs(res.docs);
       return res.docs.length === limit ? replicate(bookmark) : null;
@@ -115,5 +124,5 @@ function replicate(bookmark) {
 
 replicate()
   .then(() => {
-    fs.writeFile(`mdm_problems.json`, JSON.stringify(problems), 'utf8', console.error);
+    return fs.writeFile(`mdm_problems.json`, JSON.stringify(problems), 'utf8');
   });
