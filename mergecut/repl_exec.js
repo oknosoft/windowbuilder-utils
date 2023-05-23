@@ -14,23 +14,12 @@
  * DBUSER admin
  */
 
-const {tasks, start} = require('./config');
+const {tasks, start, life, security} = require('./config');
 const PouchDB = require('pouchdb');
 const {clone_security, sleep} = require('./clone');
 const {DBUSER, DBPWD} = process.env;
 
-let queue = Promise.resolve();
-
-for(const abonent in tasks) {
-  const {clone, ...other} = tasks[abonent];
-  for(const {src, tgt} of clone) {
-    queue = queue
-      .then(() => replicate({src, tgt, ...other}))
-      .catch((err) => {
-        console.error(err);
-      });
-  }
-}
+let queue;
 
 function replicate({src, tgt, exclude  = [], test, clear = {}}) {
   // получаем массив всех баз
@@ -72,7 +61,7 @@ function replicate({src, tgt, exclude  = [], test, clear = {}}) {
                     },
                   });
                 }
-                return clone_security(sdb, tdb)
+                return (security === false ? Promise.resolve() : clone_security(sdb, tdb))
                   .then(() => tdb.replicate.from(sdb, {
                     selector: {
                       $or: [
@@ -90,7 +79,12 @@ function replicate({src, tgt, exclude  = [], test, clear = {}}) {
                   .catch(err => err);
               })
               .then((res) => {
-                res instanceof Error ? console.error(res) : console.log(JSON.stringify(res));
+                if(res instanceof Error) {
+                  console.error(res);
+                }
+                else if(res.docs_read || res.docs_written) {
+                  console.log(JSON.stringify(res));
+                }                 
                 return sleep(200, clear.src ? sdb.destroy() : null);
               })
           );
@@ -99,3 +93,23 @@ function replicate({src, tgt, exclude  = [], test, clear = {}}) {
       return res;
     });
 }
+
+function execute() {
+  queue = Promise.resolve();
+  for(const abonent in tasks) {
+    const {clone, ...other} = tasks[abonent];
+    for(const {src, tgt} of clone) {
+      queue = queue
+          .then(() => replicate({src, tgt, ...other}))
+          .catch((err) => {
+            console.error(err);
+          })
+          .then(() => sleep(600));
+    }
+  }
+  if(life) {
+    queue = queue.then(() => setTimeout(execute, life));
+  }
+}
+
+execute();

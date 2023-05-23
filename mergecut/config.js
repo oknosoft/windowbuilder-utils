@@ -7,9 +7,11 @@
 
 module.exports = {
   start: '2022-10-10',
+  life: 2400,
+  security: false,
   tasks: {
     "photo->local": {
-      test: /_22_doc/,
+      test: /wb_22_doc_1013/,
       dbs: [],
       clear: {
         src: false,
@@ -19,12 +21,12 @@ module.exports = {
       clone: [
         {
           src: 'https://dh5.oknosoft.ru:222',
-          tgt: 'http://localhost:5984',
+          tgt: 'http://cou221:5984/',
         },
       ],
     },
     "local->photo": {
-      test: /_22_doc/,
+      test: /wb_22_doc_1013/,
       dbs: [],
       clear: {
         src: false,
@@ -33,7 +35,7 @@ module.exports = {
       // эти серверы будут клонированы с обрезанием, массив может быть пустым
       clone: [
         {
-          src: 'http://localhost:5984',
+          src: 'http://cou221:5984/',
           tgt: 'https://dh5.oknosoft.ru:222',
         },
       ],
