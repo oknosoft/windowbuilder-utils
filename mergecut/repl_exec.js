@@ -83,7 +83,9 @@ function replicate({src, tgt, exclude  = [], test, clear = {}}) {
                   console.error(res);
                 }
                 else if(res.docs_read || res.docs_written) {
-                  console.log(JSON.stringify(res));
+                  res.source = sdb.name;
+                  res.target = tdb.name;
+                  console.log(JSON.stringify(res, null, '\t'));
                 }                 
                 return sleep(200, clear.src ? sdb.destroy() : null);
               })
