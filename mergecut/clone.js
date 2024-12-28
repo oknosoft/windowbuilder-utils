@@ -11,13 +11,13 @@ const fs = require('fs');
 const fetch = require('node-fetch');
 const {start} = require('./config');
 const {DBUSER, DBPWD} = process.env;
-const limit = 100;
+const limit = 160;
 const timeout = 120000;
 const cnames = ['doc.calc_order', 'cat.characteristics'];
 const progress = require('./progress.json');
 let step = 0;
 
-module.exports = function ({src, tgt, suffix, all_docs, all_dbs, local_docs, exclude = [], include = [], remove = [], skip_security, skip_docs}) {
+module.exports = function ({src, tgt, suffix, all_docs, all_dbs, local_docs, test, exclude = [], include = [], remove = [], skip_security, skip_docs}) {
 
   let index = 0;
 
@@ -28,7 +28,7 @@ module.exports = function ({src, tgt, suffix, all_docs, all_dbs, local_docs, exc
     if(name && include.length && !include.includes(name)) {
       return next(dbs);
     }
-    if(name && (all_dbs || name[0] !== '_') && !exclude.includes(name)) {
+    if(name && (all_dbs || name[0] !== '_') && !exclude.includes(name) && (!test || test.test(name))) {
       return clone({src, tgt, name, suffix, all_docs, local_docs, remove, skip_security, skip_docs})
         .then(() => next(dbs));
     }
@@ -141,7 +141,7 @@ function next_docs(src, tgt, startkey, all_docs) {
 
       if(rows.length) {
         progress[src.name] = rows[rows.length-1].key;
-        fs.writeFile(require.resolve('./progress.json'), JSON.stringify(progress), 'utf8', (err) => err && console.log(err));
+        fs.writeFile(require.resolve('./progress.json'), JSON.stringify(progress, null, '\t'), 'utf8', (err) => err && console.log(err));
         step++;
         console.log(`${tgt.name} step: ${step}, key: ${progress[src.name]}, dcount: ${dcount}`);
       }

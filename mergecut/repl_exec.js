@@ -63,6 +63,7 @@ function replicate({src, tgt, exclude  = [], test, clear = {}}) {
                 }
                 return (security === false ? Promise.resolve() : clone_security(sdb, tdb))
                   .then(() => tdb.replicate.from(sdb, {
+                    style: 'main_only', //all_docs
                     selector: {
                       $or: [
                         {

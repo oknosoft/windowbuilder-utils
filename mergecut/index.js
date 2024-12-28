@@ -16,16 +16,17 @@
  */
 
 const {tasks} = require('./config');
-const clone = require('./clone');
+const execute = require('./clone');
 
 let queue = Promise.resolve();
 
 for(const abonent in tasks) {
-  for(const task of tasks[abonent].clone) {
+  const {clone, ...other} = tasks[abonent];
+  for(const task of clone) {
     queue = queue
-      .then(() => clone(task))
+      .then(() => execute({...other, ...task}))
       .catch((err) => {
-        console.log(err);
+        console.error(err);
       });
   }
 }

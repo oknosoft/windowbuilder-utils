@@ -124,5 +124,5 @@ function replicate(bookmark) {
 
 replicate()
   .then(() => {
-    return fs.writeFile(`mdm_problems.json`, JSON.stringify(problems), 'utf8');
+    return fs.writeFile(`mdm_problems.json`, JSON.stringify(problems, null, '\t'), 'utf8');
   });
