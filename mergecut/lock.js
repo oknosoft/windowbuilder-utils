@@ -52,7 +52,8 @@ function lock({src}) {
                         const auth = {_id, validate_doc_update, language: "javascript"};
                         await sdb.put(auth);
                     }
-                    await sleep();
+                    await sleep(10);
+                    console.log(name);
                 }
             }
         });
