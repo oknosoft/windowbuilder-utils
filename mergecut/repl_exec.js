@@ -30,71 +30,75 @@ function replicate({src, tgt, exclude  = [], include = [], test, clear = {}}) {
     },
     skip_setup: true,
   }).info()
-    .then(async (dbs) => {
-      const res = [];
-      for(const name of dbs) {
-        if(name && name[0] !== '_' && !exclude.includes(name) && (!include.length || include.includes(name)) && (!test || test.test(name))) {
-          const sdb = new PouchDB(`${src}/${name}`, {
-            auth: {
-              username: DBUSER,
-              password: DBPWD
-            },
-            skip_setup: true,
-          });
-          let tdb = new PouchDB(`${tgt}/${name}`, {
-            auth: {
-              username: DBUSER,
-              password: DBPWD
-            },
-          });
-          res.push(
-            await tdb.info()
-              .then(() => {
-                return clear.tgt ? tdb.destroy().catch(() => null) : null;
-              })
-              .then(() => {
-                if(clear.tgt) {
-                  tdb = new PouchDB(`${tgt}/${name}`, {
-                    auth: {
-                      username: DBUSER,
-                      password: DBPWD
-                    },
-                  });
-                }
-                return (security === false ? Promise.resolve() : clone_security(sdb, tdb))
-                  .then(() => tdb.replicate.from(sdb, {
-                    style: 'main_only', //all_docs, winning_revs_only: true
-                    selector: {
-                      $or: [
-                        {
-                          class_name: {$in: ['cat.characteristics', 'doc.calc_order']},
-                          'timestamp.moment': {$gt: start},
-                          obj_delivery_state: {$ne: 'Шаблон'}
-                        },
-                        {
-                          _id: {$regex: '_design/'}
-                        }
-                      ]
-                    }
-                  }))
-                  .catch(err => err);
-              })
-              .then((res) => {
-                if(res instanceof Error) {
-                  console.error(res);
-                }
-                else if(res.docs_read || res.docs_written) {
-                  res.source = sdb.name;
-                  res.target = tdb.name;
-                  console.log(JSON.stringify(res, null, '\t'));
-                }                 
-                return sleep(200, clear.src ? sdb.destroy() : null);
-              })
-          );
+      .then(async (dbs) => {
+        const res = [];
+        for(const name of dbs) {
+          if(name && name[0] !== '_' && !exclude.includes(name) && (!include.length || include.includes(name)) && (!test || test.test(name))) {
+            const sdb = new PouchDB(`${src}/${name}`, {
+              auth: {
+                username: DBUSER,
+                password: DBPWD
+              },
+              skip_setup: true,
+            });
+            let tdb = new PouchDB(`${tgt}/${name}`, {
+              auth: {
+                username: DBUSER,
+                password: DBPWD
+              },
+            });
+            res.push(
+                await tdb.info()
+                    .then(() => {
+                      return clear.tgt ? tdb.destroy().catch(() => null) : null;
+                    })
+                    .then(() => {
+                      if(clear.tgt) {
+                        tdb = new PouchDB(`${tgt}/${name}`, {
+                          auth: {
+                            username: DBUSER,
+                            password: DBPWD
+                          },
+                        });
+                      }
+                      return (security === false ? Promise.resolve() : clone_security(sdb, tdb))
+                          .then(() => tdb.replicate.from(sdb, {
+                            style: 'main_only', //all_docs,
+                            // winning_revs_only: true,
+                            // batch_size: 20,
+                            selector: {
+                              $or: [
+                                {
+                                  class_name: {$in: ['cat.characteristics', 'doc.calc_order']},
+                                  'timestamp.moment': {$gt: start},
+                                  obj_delivery_state: {$ne: 'Шаблон'}
+                                },
+                                {
+                                  _id: {$regex: '_design/'}
+                                }
+                              ]
+                            }
+                          }))
+                          .catch(err => err);
+                    })
+                    .then((res) => {
+                      let wait = 200;
+                      if(res instanceof Error) {
+                        console.error(res);
+                        wait = 4000;
+                      }
+                      else if(res.docs_read || res.docs_written) {
+                        res.source = sdb.name;
+                        res.target = tdb.name;
+                        console.log(JSON.stringify(res, null, '\t'));
+                      }
+                      return sleep(wait, clear.src ? sdb.destroy() : null);
+                    })
+            );
+          }
         }
-      }
-      return res;
-    });
+        return res;
+      });
 }
 
 function execute() {
@@ -106,6 +110,7 @@ function execute() {
           .then(() => replicate({src, tgt, ...other}))
           .catch((err) => {
             console.error(err);
+            return sleep(6000);
           })
           .then(() => sleep(600));
     }
