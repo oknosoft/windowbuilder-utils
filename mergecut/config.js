@@ -6,7 +6,7 @@
  */
 
 module.exports = {
-  start: '2024-10-16',
+  start: '2025-11-11',
   life: 0,	//2400
   security: true,
   tasks: {

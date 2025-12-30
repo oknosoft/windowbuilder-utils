@@ -121,7 +121,7 @@ function clone_security(src, tgt) {
       })
     })
     .then((res) => {
-      console.log(`${tgt.name} _security`);
+      console.log(`${src.name} _security`);
       return res.json();
     })
 }

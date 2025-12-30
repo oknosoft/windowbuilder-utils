@@ -21,7 +21,7 @@ const {DBUSER, DBPWD} = process.env;
 
 let queue;
 
-function replicate({src, tgt, exclude  = [], test, clear = {}}) {
+function replicate({src, tgt, exclude  = [], include = [], test, clear = {}}) {
   // получаем массив всех баз
   return new PouchDB(`${src}/_all_dbs`, {
     auth: {
@@ -33,7 +33,7 @@ function replicate({src, tgt, exclude  = [], test, clear = {}}) {
     .then(async (dbs) => {
       const res = [];
       for(const name of dbs) {
-        if(name && name[0] !== '_' && !exclude.includes(name) && (!test || test.test(name))) {
+        if(name && name[0] !== '_' && !exclude.includes(name) && (!include.length || include.includes(name)) && (!test || test.test(name))) {
           const sdb = new PouchDB(`${src}/${name}`, {
             auth: {
               username: DBUSER,
@@ -63,7 +63,7 @@ function replicate({src, tgt, exclude  = [], test, clear = {}}) {
                 }
                 return (security === false ? Promise.resolve() : clone_security(sdb, tdb))
                   .then(() => tdb.replicate.from(sdb, {
-                    style: 'main_only', //all_docs
+                    style: 'main_only', //all_docs, winning_revs_only: true
                     selector: {
                       $or: [
                         {
