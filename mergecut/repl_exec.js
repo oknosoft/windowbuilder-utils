@@ -82,17 +82,16 @@ function replicate({src, tgt, exclude  = [], include = [], test, clear = {}}) {
                           .catch(err => err);
                     })
                     .then((res) => {
-                      let wait = 200;
-                      if(res instanceof Error) {
-                        console.error(res);
-                        wait = 4000;
-                      }
-                      else if(res.docs_read || res.docs_written) {
-                        res.source = sdb.name;
-                        res.target = tdb.name;
-                        console.log(JSON.stringify(res, null, '\t'));
-                      }
-                      return sleep(wait, clear.src ? sdb.destroy() : null);
+                        if(res instanceof Error) {
+                            console.error(res);
+                            return sleep(4000);
+                        }
+                        if(res.docs_read || res.docs_written) {
+                            res.source = sdb.name;
+                            res.target = tdb.name;
+                            console.log(JSON.stringify(res, null, '\t'));
+                        }
+                        return sleep(200, clear.src ? sdb.destroy() : null);
                     })
             );
           }
